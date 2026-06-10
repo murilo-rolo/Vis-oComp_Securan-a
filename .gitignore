@@ -84,3 +84,7 @@ Thumbs.db
 
 # Documentação Local (não versionar)
 local_docs/
+
+# Google Drive/Colab
+.tmp.drivedownload/
+.tmp.driveupload/
