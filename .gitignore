@@ -1,0 +1,86 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+env/
+ENV/
+.venv
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# PyTorch - Modelos (não versionar por padrão)
+# *.pth  # Comentado para permitir versionar se necessário
+# *.pt   # Comentado para permitir versionar se necessário
+
+# Models directory (modelos treinados - não versionar)
+models/**/*
+!models/**/.gitkeep
+!models/**/README.md
+
+# Data - Ignora todo o conteúdo (mantém apenas estrutura de diretórios vazia)
+# Ignora tudo em data/ exceto arquivos de estrutura (.gitkeep, README, etc.)
+data/**/*
+!data/**/.gitkeep
+!data/**/README.md
+
+# Dataset completo - Ignora todo conteúdo (arquivos muito grandes)
+# Ignora tudo em dataset/ exceto arquivos de metadados
+dataset/**/*
+!dataset/**/*.csv
+!dataset/**/*.txt
+!dataset/**/*.json
+!dataset/**/*.md
+!dataset/**/.gitkeep
+!dataset/**/README.md
+
+# Results - Modelos e relatórios (não versionar)
+results/models/*.pth
+results/models/*.pt
+results/multimodal/*.pth
+results/multimodal/*.pt
+results/cnn3d/**/*.pth
+results/cnn3d/**/*.pt
+results/emotion/*.pth
+results/emotion/*.pt
+results/reports/*.txt
+results/reports/*.json
+results/reports/*.png
+results/reports/*.jpg
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Documentação Local (não versionar)
+local_docs/
