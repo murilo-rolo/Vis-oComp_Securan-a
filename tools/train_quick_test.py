@@ -7,6 +7,7 @@ Ideal para:
 - Validação rápida antes de treinar por completo
 """
 
+import argparse
 import sys
 from pathlib import Path
 
@@ -16,6 +17,15 @@ sys.path.insert(0, str(Path(__file__).parent))
 from src.training.train import train
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Treinamento rápido para teste")
+    parser.add_argument(
+        "--processed_data_root",
+        type=str,
+        default="data/processed",
+        help="Raiz dos dados processados (padrão: 'data/processed')"
+    )
+    args = parser.parse_args()
+
     print("="*60)
     print("TREINAMENTO RÁPIDO - TESTE (10 ÉPOCAS)")
     print("="*60)
@@ -27,7 +37,7 @@ if __name__ == "__main__":
     print("\n" + "="*60 + "\n")
     
     train(
-        processed_data_root="data/processed",
+        processed_data_root=args.processed_data_root,
         batch_size=4,  # Reduzido para economizar memória
         num_frames=16,
         num_epochs=10,  # Apenas 10 épocas para teste

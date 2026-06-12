@@ -104,6 +104,18 @@ def main():
         help="Raiz dos dados processados"
     )
     parser.add_argument(
+        "--pose_data_root",
+        type=str,
+        default="data/pose",
+        help="Raiz dos dados de pose"
+    )
+    parser.add_argument(
+        "--emotion_data_root",
+        type=str,
+        default="data/emotion",
+        help="Raiz dos dados de emoção"
+    )
+    parser.add_argument(
         "--batch_size",
         type=int,
         default=8,
@@ -214,8 +226,8 @@ def main():
     elif args.model == "multimodal":
         _, _, test_loader = get_multimodal_dataloaders(
             video_data_root=args.data_root,
-            pose_data_root="data/pose",
-            emotion_data_root="data/emotion",
+            pose_data_root=args.pose_data_root,
+            emotion_data_root=args.emotion_data_root,
             batch_size=args.batch_size,
             num_frames=16,
             window_size=16,

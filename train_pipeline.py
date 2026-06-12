@@ -435,11 +435,13 @@ Exemplos de uso:
                        help="Caminho para dataset AffectNet")
     parser.add_argument("--ucf101_path", type=str, default="dataset/UCF101",
                        help="Caminho para dataset UCF101")
+    parser.add_argument("--project_root", type=str, default=".",
+                       help="Diretório raiz do projeto (padrão: '.')")
     
     args = parser.parse_args()
     
     # Criar pipeline
-    pipeline = TrainingPipeline(force_retrain=args.force_retrain)
+    pipeline = TrainingPipeline(project_root=args.project_root, force_retrain=args.force_retrain)
     
     # Preparar kwargs
     kwargs = {
