@@ -24,6 +24,12 @@ if __name__ == "__main__":
         default="data/processed",
         help="Raiz dos dados processados (padrão: 'data/processed')"
     )
+    parser.add_argument(
+        "--results_root",
+        type=str,
+        default="results/models",
+        help="Raiz dos resultados, onde ficará best_model.pth"
+    )
     args = parser.parse_args()
 
     print("="*60)
@@ -47,7 +53,7 @@ if __name__ == "__main__":
         dropout=0.5,
         num_workers=2,  # Reduzido para economizar recursos
         device=None,  # Auto-detecta (CPU ou GPU)
-        save_dir="results/models",
+        save_dir=str(Path(__file__).resolve().parent.parent / "results" / "models"),
         seed=42,
         early_stopping_patience=5,  # Para mais cedo se não melhorar
         use_scheduler=True
