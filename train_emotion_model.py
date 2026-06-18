@@ -1,32 +1,19 @@
 """
 Script de treinamento para modelo de Emotion Recognition no dataset AffectNet.
-
-Este script treina o modelo EmotionNet (ResNet-18 adaptado) para classificação
-de emoções faciais usando o dataset AffectNet.
-
-Uso:
-    # Treinamento rápido (10 épocas)
-    python train_emotion_model.py --dataset_path dataset/AffectNet --epochs 10
-    
-    # Treinamento completo (50 épocas)
-    python train_emotion_model.py --dataset_path dataset/AffectNet --epochs 50 --batch_size 32
 """
 
 import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 from torchvision import transforms
 from pathlib import Path
 from PIL import Image
-import numpy as np
-from tqdm import tqdm
-import json
-from datetime import datetime
 from typing import Optional
 
-from src.models.emotion_cnn import EmotionNet, create_emotion_model
+from src.models.emotion_cnn import create_emotion_model
+from src.training.utils import run_epoch, create_dataloader
 
 # Mapeamento de classes AffectNet
 AFFECTNET_CLASSES = {
@@ -141,75 +128,7 @@ def get_transforms(is_train: bool = True):
         ])
 
 
-def train_epoch(model, train_loader, criterion, optimizer, device, epoch):
-    """Treina por uma época."""
-    model.train()
-    running_loss = 0.0
-    correct = 0
-    total = 0
-    
-    pbar = tqdm(train_loader, desc=f"Epoch {epoch} [Train]")
-    for images, labels in pbar:
-        images = images.to(device)
-        labels = labels.to(device)
-        
-        # Forward
-        optimizer.zero_grad()
-        outputs = model(images)
-        loss = criterion(outputs, labels)
-        
-        # Backward
-        loss.backward()
-        optimizer.step()
-        
-        # Estatísticas
-        running_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total += labels.size(0)
-        correct += predicted.eq(labels).sum().item()
-        
-        # Atualizar progress bar
-        pbar.set_postfix({
-            'loss': f'{running_loss/(pbar.n+1):.4f}',
-            'acc': f'{100.*correct/total:.2f}%'
-        })
-    
-    epoch_loss = running_loss / len(train_loader)
-    epoch_acc = 100. * correct / total
-    
-    return epoch_loss, epoch_acc
 
-
-def validate(model, val_loader, criterion, device, epoch):
-    """Valida o modelo."""
-    model.eval()
-    running_loss = 0.0
-    correct = 0
-    total = 0
-    
-    with torch.no_grad():
-        pbar = tqdm(val_loader, desc=f"Epoch {epoch} [Val]")
-        for images, labels in pbar:
-            images = images.to(device)
-            labels = labels.to(device)
-            
-            outputs = model(images)
-            loss = criterion(outputs, labels)
-            
-            running_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += labels.size(0)
-            correct += predicted.eq(labels).sum().item()
-            
-            pbar.set_postfix({
-                'loss': f'{running_loss/(pbar.n+1):.4f}',
-                'acc': f'{100.*correct/total:.2f}%'
-            })
-    
-    epoch_loss = running_loss / len(val_loader)
-    epoch_acc = 100. * correct / total
-    
-    return epoch_loss, epoch_acc
 
 
 def main():
@@ -284,20 +203,13 @@ def main():
     )
     
     # Criar DataLoaders
-    train_loader = DataLoader(
-        train_dataset,
-        batch_size=args.batch_size,
-        shuffle=True,
-        num_workers=args.num_workers,
-        pin_memory=True if args.device == "cuda" else False
+    train_loader = create_dataloader(
+        train_dataset, batch_size=args.batch_size,
+        shuffle=True, num_workers=args.num_workers
     )
-    
-    val_loader = DataLoader(
-        val_dataset,
-        batch_size=args.batch_size,
-        shuffle=False,
-        num_workers=args.num_workers,
-        pin_memory=True if args.device == "cuda" else False
+    val_loader = create_dataloader(
+        val_dataset, batch_size=args.batch_size,
+        shuffle=False, num_workers=args.num_workers
     )
     
     # Criar modelo
@@ -335,13 +247,15 @@ def main():
     print()
     
     for epoch in range(1, args.epochs + 1):
-        # Treinar
-        train_loss, train_acc = train_epoch(
-            model, train_loader, criterion, optimizer, device, epoch
+        train_loss, train_acc = run_epoch(
+            model, train_loader, criterion, device,
+            is_train=True, optimizer=optimizer,
+            desc=f"Epoch {epoch} [Train]"
         )
-        
-        # Validar
-        val_loss, val_acc = validate(model, val_loader, criterion, device, epoch)
+        val_loss, val_acc = run_epoch(
+            model, val_loader, criterion, device,
+            is_train=False, desc=f"Epoch {epoch} [Val]"
+        )
         
         # Atualizar learning rate
         scheduler.step()

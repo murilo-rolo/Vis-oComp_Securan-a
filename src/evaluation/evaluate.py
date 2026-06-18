@@ -108,99 +108,62 @@ def evaluate_model(
     return metrics
 
 
-def print_metrics(metrics: dict):
-    """
-    Imprime métricas formatadas.
-    
-    Args:
-        metrics: Dicionário com métricas
-    """
-    print("\n" + "="*50)
-    print("MÉTRICAS DE AVALIAÇÃO")
-    print("="*50)
-    print(f"\nNúmero de amostras: {metrics['num_samples']}")
-    print(f"  - Non-Violent: {metrics['num_non_violent']}")
-    print(f"  - Violent: {metrics['num_violent']}")
-    
-    print(f"\nMétricas Gerais:")
-    print(f"  Accuracy:  {metrics['accuracy']:.4f} ({metrics['accuracy']*100:.2f}%)")
-    print(f"  Precision: {metrics['precision']:.4f} ({metrics['precision']*100:.2f}%)")
-    print(f"  Recall:    {metrics['recall']:.4f} ({metrics['recall']*100:.2f}%)")
-    print(f"  F1-Score:  {metrics['f1_score']:.4f} ({metrics['f1_score']*100:.2f}%)")
-    
-    print(f"\nMatriz de Confusão:")
+def _format_metrics_report(metrics: dict, title: str = "MÉTRICAS DE AVALIAÇÃO") -> str:
+    """Gera relatório formatado de métricas (usado tanto para print quanto para salvar)."""
     cm = np.array(metrics['confusion_matrix'])
-    print(f"                Predito")
-    print(f"              Non-Violent  Violent")
-    print(f"Real Non-Violent    {cm[0,0]:6d}    {cm[0,1]:6d}")
-    print(f"     Violent        {cm[1,0]:6d}    {cm[1,1]:6d}")
-    
-    print(f"\nClassification Report:")
     report = metrics['classification_report']
-    print(f"  Non-Violent:")
-    print(f"    Precision: {report['0']['precision']:.4f}")
-    print(f"    Recall:    {report['0']['recall']:.4f}")
-    print(f"    F1-Score:  {report['0']['f1-score']:.4f}")
-    print(f"  Violent:")
-    print(f"    Precision: {report['1']['precision']:.4f}")
-    print(f"    Recall:    {report['1']['recall']:.4f}")
-    print(f"    F1-Score:  {report['1']['f1-score']:.4f}")
-    
-    print("="*50 + "\n")
+    lines = [
+        "=" * 50, title, "=" * 50,
+        f"\nNúmero de amostras: {metrics['num_samples']}",
+        f"  - Non-Violent: {metrics['num_non_violent']}",
+        f"  - Violent: {metrics['num_violent']}",
+        "\nMétricas Gerais:",
+        f"  Accuracy:  {metrics['accuracy']:.4f} ({metrics['accuracy']*100:.2f}%)",
+        f"  Precision: {metrics['precision']:.4f} ({metrics['precision']*100:.2f}%)",
+        f"  Recall:    {metrics['recall']:.4f} ({metrics['recall']*100:.2f}%)",
+        f"  F1-Score:  {metrics['f1_score']:.4f} ({metrics['f1_score']*100:.2f}%)",
+        "\nMatriz de Confusão:",
+        "                Predito",
+        "              Non-Violent  Violent",
+        f"Real Non-Violent    {cm[0,0]:6d}    {cm[0,1]:6d}",
+        f"     Violent        {cm[1,0]:6d}    {cm[1,1]:6d}",
+        "\nClassification Report:",
+        "  Non-Violent:",
+        f"    Precision: {report['0']['precision']:.4f}",
+        f"    Recall:    {report['0']['recall']:.4f}",
+        f"    F1-Score:  {report['0']['f1-score']:.4f}",
+        "  Violent:",
+        f"    Precision: {report['1']['precision']:.4f}",
+        f"    Recall:    {report['1']['recall']:.4f}",
+        f"    F1-Score:  {report['1']['f1-score']:.4f}",
+        "=" * 50 + "\n",
+    ]
+    return "\n".join(lines)
+
+
+def print_metrics(metrics: dict):
+    """Imprime métricas formatadas no console."""
+    print(_format_metrics_report(metrics))
 
 
 def save_report(metrics: dict, output_path: Path, format: str = "both"):
     """
     Salva relatório de métricas em arquivo.
-    
-    Args:
-        metrics: Dicionário com métricas
-        output_path: Caminho base para salvar (sem extensão)
-        format: "json", "txt" ou "both"
     """
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    if format in ["json", "both"]:
+
+    if format in ("json", "both"):
         json_path = output_path.with_suffix(".json")
         with open(json_path, 'w') as f:
             json.dump(metrics, f, indent=2)
         print(f"Relatório JSON salvo em: {json_path}")
-    
-    if format in ["txt", "both"]:
+
+    if format in ("txt", "both"):
         txt_path = output_path.with_suffix(".txt")
         with open(txt_path, 'w') as f:
-            f.write("="*50 + "\n")
-            f.write("RELATÓRIO DE AVALIAÇÃO - DETECÇÃO DE VIOLÊNCIA EM VÍDEOS\n")
-            f.write("="*50 + "\n\n")
-            
-            f.write(f"Número de amostras: {metrics['num_samples']}\n")
-            f.write(f"  - Non-Violent: {metrics['num_non_violent']}\n")
-            f.write(f"  - Violent: {metrics['num_violent']}\n\n")
-            
-            f.write("Métricas Gerais:\n")
-            f.write(f"  Accuracy:  {metrics['accuracy']:.4f} ({metrics['accuracy']*100:.2f}%)\n")
-            f.write(f"  Precision: {metrics['precision']:.4f} ({metrics['precision']*100:.2f}%)\n")
-            f.write(f"  Recall:    {metrics['recall']:.4f} ({metrics['recall']*100:.2f}%)\n")
-            f.write(f"  F1-Score:  {metrics['f1_score']:.4f} ({metrics['f1_score']*100:.2f}%)\n\n")
-            
-            f.write("Matriz de Confusão:\n")
-            cm = np.array(metrics['confusion_matrix'])
-            f.write(f"                Predito\n")
-            f.write(f"              Non-Violent  Violent\n")
-            f.write(f"Real Non-Violent    {cm[0,0]:6d}    {cm[0,1]:6d}\n")
-            f.write(f"     Violent        {cm[1,0]:6d}    {cm[1,1]:6d}\n\n")
-            
-            f.write("Classification Report:\n")
-            report = metrics['classification_report']
-            f.write(f"  Non-Violent:\n")
-            f.write(f"    Precision: {report['0']['precision']:.4f}\n")
-            f.write(f"    Recall:    {report['0']['recall']:.4f}\n")
-            f.write(f"    F1-Score:  {report['0']['f1-score']:.4f}\n")
-            f.write(f"  Violent:\n")
-            f.write(f"    Precision: {report['1']['precision']:.4f}\n")
-            f.write(f"    Recall:    {report['1']['recall']:.4f}\n")
-            f.write(f"    F1-Score:  {report['1']['f1-score']:.4f}\n")
-        
+            f.write(_format_metrics_report(
+                metrics, "RELATÓRIO DE AVALIAÇÃO - DETECÇÃO DE VIOLÊNCIA EM VÍDEOS"
+            ))
         print(f"Relatório TXT salvo em: {txt_path}")
 
 

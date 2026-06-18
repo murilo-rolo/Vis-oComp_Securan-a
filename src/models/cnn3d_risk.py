@@ -1,20 +1,11 @@
 """
 Modelo CNN 3D para detecção de risco/violência em vídeos.
-
-Este módulo implementa CNN3DRiskDetector baseado em modelos 3D do torchvision
-(R3D, R(2+1)D, etc.) para classificação de ações e detecção de violência.
-
-Arquitetura:
-1. Backbone 3D pré-treinado (UCF101 ou Kinetics)
-2. Adaptação da última camada para classificação binária
-3. Suporte a fine-tuning em RWF-2000
 """
 
 import torch
 import torch.nn as nn
-from typing import Optional, Tuple, Literal
+from typing import Optional, Literal
 
-# Tentar importar modelos 3D do torchvision
 try:
     import torchvision.models.video as video_models
     HAS_VIDEO_MODELS = True
@@ -22,166 +13,113 @@ except ImportError:
     HAS_VIDEO_MODELS = False
     print("Aviso: torchvision.models.video não disponível. Use torchvision >= 0.13.0")
 
+_AVAILABLE_MODELS = {
+    "r3d_18": {"constructor": "r3d_18", "weights_enum": "R3D_18_Kinetics400_Weights"},
+    "r2plus1d_18": {"constructor": "r2plus1d_18", "weights_enum": "R2Plus1D_18_Kinetics400_Weights"},
+    "mc3_18": {"constructor": "mc3_18", "weights_enum": "MC3_18_Kinetics400_Weights"},
+}
+
+_FEATURE_DIM_MAP = {"r3d_18": 512, "r2plus1d_18": 512, "mc3_18": 512}
+
+
+def _create_backbone(model_name: str, pretrained: bool) -> nn.Module:
+    if not HAS_VIDEO_MODELS:
+        raise ImportError(
+            "torchvision.models.video não disponível. "
+            "Instale torchvision >= 0.13.0: pip install torchvision>=0.13.0"
+        )
+    if model_name not in _AVAILABLE_MODELS:
+        raise ValueError(
+            f"Modelo não suportado: {model_name}. Opções: {list(_AVAILABLE_MODELS.keys())}"
+        )
+    info = _AVAILABLE_MODELS[model_name]
+    constructor = getattr(video_models, info["constructor"])
+    if pretrained:
+        weights_enum = getattr(video_models, info["weights_enum"], None)
+        if weights_enum is not None:
+            try:
+                return constructor(weights=weights_enum.DEFAULT)
+            except Exception:
+                return constructor(weights=None)
+        return constructor(weights=None)
+    return constructor(weights=None)
+
+
+def _get_feature_dim(backbone: nn.Module, model_name: str) -> int:
+    if hasattr(backbone, 'fc') and hasattr(backbone.fc, 'in_features'):
+        return backbone.fc.in_features
+    if hasattr(backbone, 'head') and hasattr(backbone.head, 'in_features'):
+        return backbone.head.in_features
+    children = list(backbone.children())
+    if children:
+        last = children[-1]
+        if isinstance(last, nn.Linear):
+            return last.in_features
+    return _FEATURE_DIM_MAP.get(model_name, 512)
+
+
+def _strip_classifier(backbone: nn.Module) -> nn.Module:
+    children = list(backbone.children())
+    if children and isinstance(children[-1], (nn.Linear, nn.Dropout)):
+        return nn.Sequential(*children[:-1])
+    return backbone
+
 
 class CNN3DRiskDetector(nn.Module):
     """
     Modelo CNN 3D para detecção de risco/violência.
-    
-    Baseado em modelos 3D do torchvision (R3D, R(2+1)D, etc.) pré-treinados
-    em datasets de action recognition (UCF101, Kinetics).
-    
-    Input: Clipe de vídeo (T, C, H, W) onde T é o número de frames
-    Output: Logits para classificação binária (violent/non-violent)
+
+    Input: (batch, T, C, H, W) ou (batch, C, T, H, W)
+    Output: Logits (batch, num_classes)
     """
-    
+
     def __init__(
         self,
         model_name: Literal["r3d_18", "r2plus1d_18", "mc3_18", "mvit"] = "r2plus1d_18",
         num_classes: int = 2,
         pretrained: bool = True,
-        pretrained_dataset: str = "kinetics400",  # "kinetics400" ou "ucf101"
+        pretrained_dataset: str = "kinetics400",
         dropout: float = 0.5,
         freeze_backbone: bool = False
     ):
-        """
-        Inicializa o modelo CNN 3D.
-        
-        Args:
-            model_name: Nome do modelo 3D ("r3d_18", "r2plus1d_18", "mc3_18", "mvit")
-            num_classes: Número de classes de saída (2 para binary classification)
-            pretrained: Se True, carrega pesos pré-treinados
-            pretrained_dataset: Dataset usado para pré-treinamento ("kinetics400" ou "ucf101")
-            dropout: Taxa de dropout antes da camada final
-            freeze_backbone: Se True, congela pesos do backbone (apenas treina FC)
-        """
         super(CNN3DRiskDetector, self).__init__()
-        
-        if not HAS_VIDEO_MODELS:
-            raise ImportError(
-                "torchvision.models.video não disponível. "
-                "Instale torchvision >= 0.13.0: pip install torchvision>=0.13.0"
-            )
-        
+
         self.model_name = model_name
         self.num_classes = num_classes
         self.pretrained = pretrained
         self.pretrained_dataset = pretrained_dataset
-        self.num_frames = 16  # Padrão, pode ser ajustado
-        
-        # Carregar modelo base
-        if model_name == "r3d_18":
-            if pretrained:
-                try:
-                    if pretrained_dataset == "kinetics400":
-                        self.backbone = video_models.r3d_18(weights=video_models.R3D_18_Kinetics400_Weights.DEFAULT)
-                    else:
-                        # Para UCF101, precisaríamos de pesos customizados ou usar Kinetics
-                        self.backbone = video_models.r3d_18(weights=video_models.R3D_18_Kinetics400_Weights.DEFAULT)
-                except:
-                    self.backbone = video_models.r3d_18(weights=None)
-            else:
-                self.backbone = video_models.r3d_18(weights=None)
-        
-        elif model_name == "r2plus1d_18":
-            if pretrained:
-                try:
-                    if pretrained_dataset == "kinetics400":
-                        self.backbone = video_models.r2plus1d_18(weights=video_models.R2Plus1D_18_Kinetics400_Weights.DEFAULT)
-                    else:
-                        self.backbone = video_models.r2plus1d_18(weights=video_models.R2Plus1D_18_Kinetics400_Weights.DEFAULT)
-                except:
-                    self.backbone = video_models.r2plus1d_18(weights=None)
-            else:
-                self.backbone = video_models.r2plus1d_18(weights=None)
-        
-        elif model_name == "mc3_18":
-            if pretrained:
-                try:
-                    self.backbone = video_models.mc3_18(weights=video_models.MC3_18_Kinetics400_Weights.DEFAULT)
-                except:
-                    self.backbone = video_models.mc3_18(weights=None)
-            else:
-                self.backbone = video_models.mc3_18(weights=None)
-        
-        else:
-            raise ValueError(f"Modelo não suportado: {model_name}")
-        
-        # Obter dimensão de features do backbone
-        # A última camada FC tem input_size = feature_dim
-        if hasattr(self.backbone, 'fc'):
-            feature_dim = self.backbone.fc.in_features
-            # Remover última camada FC
-            self.backbone = nn.Sequential(*list(self.backbone.children())[:-1])
-        elif hasattr(self.backbone, 'head'):
-            # Para modelos mais novos (MViT, etc.)
-            feature_dim = self.backbone.head.in_features
-            self.backbone = nn.Sequential(*list(self.backbone.children())[:-1])
-        else:
-            # Para modelos do torchvision, geralmente a estrutura é:
-            # stem -> layer1-4 -> avgpool -> fc
-            # Vamos tentar acessar fc diretamente
-            try:
-                # Tentar acessar como atributo
-                if hasattr(self.backbone, 'fc'):
-                    feature_dim = self.backbone.fc.in_features
-                else:
-                    # Última camada deve ser FC
-                    last_layer = list(self.backbone.children())[-1]
-                    if isinstance(last_layer, nn.Linear):
-                        feature_dim = last_layer.in_features
-                    else:
-                        # Fallback: usar 512 (padrão para ResNet-18)
-                        feature_dim = 512
-                
-                # Remover última camada
-                self.backbone = nn.Sequential(*list(self.backbone.children())[:-1])
-            except:
-                # Fallback: assumir feature_dim padrão
-                feature_dim = 512
-                # Tentar remover último módulo
-                modules = list(self.backbone.children())
-                if len(modules) > 0:
-                    self.backbone = nn.Sequential(*modules[:-1])
-        
+        self.num_frames = 16
+
+        self.backbone = _create_backbone(model_name, pretrained)
+        feature_dim = _get_feature_dim(self.backbone, model_name)
+        self.backbone = _strip_classifier(self.backbone)
         self.feature_dim = feature_dim
-        
-        # Congelar backbone se solicitado
+
         if freeze_backbone:
             for param in self.backbone.parameters():
                 param.requires_grad = False
-        
-        # Camada de dropout
+
         self.dropout = nn.Dropout(dropout)
-        
-        # Camada FC final para classificação binária
         self.classifier = nn.Linear(feature_dim, num_classes)
-        
-        # Inicializar pesos da camada FC
         nn.init.xavier_uniform_(self.classifier.weight)
         nn.init.constant_(self.classifier.bias, 0)
-    
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        Forward pass do modelo.
-        
-        Args:
-            x: Tensor de entrada (batch_size, T, C, H, W) ou (batch_size, C, T, H, W)
-               Modelos 3D do torchvision esperam (batch, C, T, H, W)
-        
-        Returns:
-            Tensor de saída (batch_size, num_classes) com logits
+        Forward pass. Detecta automaticamente:
+        - (batch, C, T, H, W) -> mantido (formato torchvision)
+        - (batch, T, C, H, W) -> convertido para (batch, C, T, H, W)
         """
-        # Verificar e ajustar formato se necessário
-        # Modelos 3D do torchvision esperam (batch, C, T, H, W)
         if len(x.shape) == 5:
-            batch_size, dim1, dim2, H, W = x.shape
-            
-            # Se primeiro dim (T) é menor que segundo (C=3), é (batch, T, C, H, W)
-            # Ou se dim1 parece ser número de frames (16, 32, etc.)
-            # Converter para (batch, C, T, H, W)
-            if dim1 < dim2 or (dim1 in [8, 16, 32, 64] and dim2 == 3):
-                # Assumir que é (batch, T, C, H, W)
-                x = x.permute(0, 2, 1, 3, 4)  # (batch, T, C, H, W) -> (batch, C, T, H, W)
+            _b, dim1, dim2, _h, _w = x.shape
+            if dim2 == 3 and dim1 != 3:
+                x = x.permute(0, 2, 1, 3, 4)
+
+        features = self.backbone(x)
+        if len(features.shape) > 2:
+            features = features.view(features.size(0), -1)
+        features = self.dropout(features)
+        return self.classifier(features)
         
         # Extrair features com backbone
         # Backbone retorna (batch, feature_dim, 1, 1, 1) após pooling

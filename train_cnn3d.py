@@ -2,112 +2,29 @@
 Script de treinamento para CNN 3D com duas etapas:
 1. Pré-treinamento em UCF101 (9 classes relevantes)
 2. Fine-tuning em RWF-2000 (2 classes: violent/non-violent)
-
-Uso:
-    # Etapa 1: Pré-treinar em UCF101
-    python train_cnn3d.py --stage pretrain --dataset ucf101 --epochs 50
-    
-    # Etapa 2: Fine-tuning em RWF-2000
-    python train_cnn3d.py --stage finetune --dataset rwf2000 --pretrained_path results/cnn3d/ucf101/best_model.pth --epochs 30
 """
 
 import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
-from torch.utils.data import DataLoader
 from pathlib import Path
-from tqdm import tqdm
 import json
-from datetime import datetime
 
 from src.models.cnn3d_risk import create_cnn3d_model
 from src.datasets.video3d_dataset import (
     get_ucf101_dataloaders,
     get_rwf2000_3d_dataloaders
 )
+from src.training.utils import run_epoch
 
 
-def train_epoch(model, train_loader, criterion, optimizer, device, epoch, num_classes):
-    """Treina por uma época."""
-    model.train()
-    running_loss = 0.0
-    correct = 0
-    total = 0
-    
-    pbar = tqdm(train_loader, desc=f"Epoch {epoch} [Train]")
-    for clips, labels in pbar:
-        # Converter de (batch, T, C, H, W) para (batch, C, T, H, W) se necessário
-        # Modelos 3D geralmente esperam (batch, C, T, H, W)
-        if len(clips.shape) == 5:
-            batch, T, C, H, W = clips.shape
-            clips = clips.permute(0, 2, 1, 3, 4)  # (batch, C, T, H, W)
-        
-        clips = clips.to(device)
-        labels = labels.to(device)
-        
-        # Forward
-        optimizer.zero_grad()
-        outputs = model(clips)
-        loss = criterion(outputs, labels)
-        
-        # Backward
-        loss.backward()
-        optimizer.step()
-        
-        # Estatísticas
-        running_loss += loss.item()
-        _, predicted = outputs.max(1)
-        total += labels.size(0)
-        correct += predicted.eq(labels).sum().item()
-        
-        # Atualizar progress bar
-        pbar.set_postfix({
-            'loss': f'{running_loss/(pbar.n+1):.4f}',
-            'acc': f'{100.*correct/total:.2f}%'
-        })
-    
-    epoch_loss = running_loss / len(train_loader)
-    epoch_acc = 100. * correct / total
-    
-    return epoch_loss, epoch_acc
-
-
-def validate(model, val_loader, criterion, device, epoch, num_classes):
-    """Valida o modelo."""
-    model.eval()
-    running_loss = 0.0
-    correct = 0
-    total = 0
-    
-    with torch.no_grad():
-        pbar = tqdm(val_loader, desc=f"Epoch {epoch} [Val]")
-        for clips, labels in pbar:
-            # Converter formato se necessário
-            if len(clips.shape) == 5:
-                batch, T, C, H, W = clips.shape
-                clips = clips.permute(0, 2, 1, 3, 4)  # (batch, C, T, H, W)
-            
-            clips = clips.to(device)
-            labels = labels.to(device)
-            
-            outputs = model(clips)
-            loss = criterion(outputs, labels)
-            
-            running_loss += loss.item()
-            _, predicted = outputs.max(1)
-            total += labels.size(0)
-            correct += predicted.eq(labels).sum().item()
-            
-            pbar.set_postfix({
-                'loss': f'{running_loss/(pbar.n+1):.4f}',
-                'acc': f'{100.*correct/total:.2f}%'
-            })
-    
-    epoch_loss = running_loss / len(val_loader)
-    epoch_acc = 100. * correct / total
-    
-    return epoch_loss, epoch_acc
+def _permute_clips(batch):
+    """Converte batch (B,T,C,H,W) para (B,C,T,H,W) para modelos 3D."""
+    clips, labels = batch
+    if len(clips.shape) == 5:
+        clips = clips.permute(0, 2, 1, 3, 4)
+    return clips, labels
 
 
 def pretrain_ucf101(args):
@@ -165,14 +82,17 @@ def pretrain_ucf101(args):
     
     print("\nIniciando treinamento...")
     for epoch in range(1, args.epochs + 1):
-        # Treinar
-        train_loss, train_acc = train_epoch(
-            model, train_loader, criterion, optimizer, device, epoch, num_classes=9
+        train_loss, train_acc = run_epoch(
+            model, train_loader, criterion, device,
+            is_train=True, optimizer=optimizer,
+            desc=f"Epoch {epoch} [Train]",
+            model_hook=_permute_clips
         )
-        
-        # Validar
-        test_loss, test_acc = validate(
-            model, test_loader, criterion, device, epoch, num_classes=9
+
+        test_loss, test_acc = run_epoch(
+            model, test_loader, criterion, device,
+            is_train=False, desc=f"Epoch {epoch} [Val]",
+            model_hook=_permute_clips
         )
         
         # Atualizar learning rate
@@ -318,14 +238,17 @@ def finetune_rwf2000(args, pretrained_path: Path):
     print("Iniciando fine-tuning...")
     
     for epoch in range(1, args.epochs + 1):
-        # Treinar
-        train_loss, train_acc = train_epoch(
-            model, train_loader, criterion, optimizer, device, epoch, num_classes=2
+        train_loss, train_acc = run_epoch(
+            model, train_loader, criterion, device,
+            is_train=True, optimizer=optimizer,
+            desc=f"Epoch {epoch} [Train]",
+            model_hook=_permute_clips
         )
-        
-        # Validar
-        val_loss, val_acc = validate(
-            model, val_loader, criterion, device, epoch, num_classes=2
+
+        val_loss, val_acc = run_epoch(
+            model, val_loader, criterion, device,
+            is_train=False, desc=f"Epoch {epoch} [Val]",
+            model_hook=_permute_clips
         )
         
         # Atualizar learning rate
