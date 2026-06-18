@@ -51,6 +51,7 @@ Este projeto foi desenvolvido como parte de um trabalho de mestrado em Visão Co
 - **Altamente Configurável**: Parâmetros ajustáveis para diferentes cenários
 - **Otimizado para Recursos Limitados**: Suporta treinamento em CPUs e GPUs
 - **Métricas Detalhadas**: Gera relatórios completos de avaliação
+- **Código modular**: Funções de treino/validação centralizadas em `src/training/utils.py`
 
 ## Datasets
 
@@ -648,7 +649,8 @@ cv-security-threat-detection/
 │   │   ├── emotion_cnn.py     # EmotionNet
 │   │   └── multimodal_risk.py # MultimodalRiskDetector
 │   ├── training/              # Scripts de treinamento
-│   │   └── train.py
+│   │   ├── train.py           # Treinamento ResNet-LSTM
+│   │   └── utils.py           # Funções compartilhadas (run_epoch, dataloader, etc.)
 │   ├── evaluation/             # Avaliação
 │   │   ├── evaluate.py
 │   │   ├── metrics.py
@@ -708,6 +710,8 @@ cv-security-threat-detection/
 - `Pillow>=10.0.0` - Processamento de imagens
 - `mediapipe>=0.10.0` - Detecção de pose
 - `facenet-pytorch>=2.5.0` - Detecção de faces
+- `matplotlib>=3.7.0` - Plotagem de gráficos (curvas ROC, PR)
+- `seaborn>=0.12.0` - Visualização de matriz de confusão
 
 ## Troubleshooting
 
