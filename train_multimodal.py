@@ -13,6 +13,7 @@ from src.models.multimodal_risk import create_multimodal_model
 from src.models.resnet_lstm import create_model as create_video_model
 from src.datasets.multimodal_dataset import get_multimodal_dataloaders
 from src.training.utils import run_epoch
+from src import paths as p
 
 
 class _MultimodalWrapper(nn.Module):
@@ -43,19 +44,19 @@ def main():
     parser.add_argument(
         "--video_data_root",
         type=str,
-        default="data/processed",
+        default=None,
         help="Raiz dos dados de vídeo"
     )
     parser.add_argument(
         "--pose_data_root",
         type=str,
-        default="data/pose",
+        default=None,
         help="Raiz dos dados de pose"
     )
     parser.add_argument(
         "--emotion_data_root",
         type=str,
-        default="data/emotion",
+        default=None,
         help="Raiz dos dados de emoção"
     )
     
@@ -115,7 +116,7 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="results/multimodal",
+        default=None,
         help="Diretório para salvar checkpoints"
     )
     
@@ -134,6 +135,15 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    if args.video_data_root is None:
+        args.video_data_root = str(p.PROCESSED_ROOT)
+    if args.pose_data_root is None:
+        args.pose_data_root = str(p.POSE_ROOT)
+    if args.emotion_data_root is None:
+        args.emotion_data_root = str(p.EMOTION_ROOT)
+    if args.output_dir is None:
+        args.output_dir = str(p.MULTIMODAL_ROOT)
     
     # Criar diretório de saída
     output_dir = Path(args.output_dir)

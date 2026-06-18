@@ -15,6 +15,8 @@ from typing import Tuple, Optional, List, Callable
 import numpy as np
 import random
 
+from src import paths as p
+
 
 class PoseSequenceDataset(Dataset):
     """
@@ -355,7 +357,7 @@ class PoseSequenceDataset(Dataset):
 
 
 def get_pose_dataloaders(
-    pose_data_root: str = "data/pose",
+    pose_data_root: str = None,
     batch_size: int = 8,
     window_size: int = 16,
     stride: int = 1,
@@ -395,6 +397,9 @@ def get_pose_dataloaders(
     Returns:
         Tupla (train_loader, val_loader, test_loader)
     """
+    if pose_data_root is None:
+        pose_data_root = str(p.POSE_ROOT)
+
     # Criar datasets
     train_dataset = PoseSequenceDataset(
         pose_data_root=pose_data_root,

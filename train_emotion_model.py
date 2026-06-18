@@ -14,6 +14,7 @@ from typing import Optional
 
 from src.models.emotion_cnn import create_emotion_model
 from src.training.utils import run_epoch, create_dataloader
+from src import paths as p
 
 # Mapeamento de classes AffectNet
 AFFECTNET_CLASSES = {
@@ -137,14 +138,14 @@ def main():
     parser.add_argument(
         "--dataset_path",
         type=str,
-        default="dataset/AffectNet",
+        default=None,
         help="Caminho para o dataset AffectNet"
     )
     
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="models/emotion",
+        default=None,
         help="Diretório para salvar checkpoints"
     )
     
@@ -184,6 +185,11 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    if args.dataset_path is None:
+        args.dataset_path = str(p.AFFECTNET_ROOT)
+    if args.output_dir is None:
+        args.output_dir = str(p.EMOTION_MODELS_ROOT)
     
     # Criar diretório de saída
     output_dir = Path(args.output_dir)

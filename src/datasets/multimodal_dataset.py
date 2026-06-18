@@ -16,6 +16,8 @@ from typing import Tuple, Optional, List, Callable
 import random
 import numpy as np
 
+from src import paths as p
+
 
 class MultimodalSurveillanceDataset(Dataset):
     """
@@ -32,9 +34,9 @@ class MultimodalSurveillanceDataset(Dataset):
     def __init__(
         self,
         # Caminhos dos dados
-        video_data_root: str = "data/processed",      # Frames ou features de vídeo
-        pose_data_root: str = "data/pose",            # Keypoints de pose
-        emotion_data_root: str = "data/emotion",      # Vetores de emoção
+        video_data_root: str = None,      # Frames ou features de vídeo
+        pose_data_root: str = None,       # Keypoints de pose
+        emotion_data_root: str = None,    # Vetores de emoção
         
         # Configuração
         split: str = "train",
@@ -76,7 +78,12 @@ class MultimodalSurveillanceDataset(Dataset):
             seed: Seed para reprodutibilidade
             dataset_name: Nome do dataset ("rwf2000")
         """
-        self.video_data_root = Path(video_data_root)
+        if video_data_root is None:
+            video_data_root = str(p.PROCESSED_ROOT)
+        if pose_data_root is None:
+            pose_data_root = str(p.POSE_ROOT)
+        if emotion_data_root is None:
+            emotion_data_root = str(p.EMOTION_ROOT)
         self.video_data_root = Path(video_data_root)
         self.pose_data_root = Path(pose_data_root)
         self.emotion_data_root = Path(emotion_data_root)
@@ -465,9 +472,9 @@ class MultimodalSurveillanceDataset(Dataset):
 
 
 def get_multimodal_dataloaders(
-    video_data_root: str = "data/processed",
-    pose_data_root: str = "data/pose",
-    emotion_data_root: str = "data/emotion",
+    video_data_root: str = None,
+    pose_data_root: str = None,
+    emotion_data_root: str = None,
     batch_size: int = 8,
     num_frames: int = 16,
     window_size: int = 16,
@@ -490,6 +497,12 @@ def get_multimodal_dataloaders(
     Returns:
         Tupla (train_loader, val_loader, test_loader)
     """
+    if video_data_root is None:
+        video_data_root = str(p.PROCESSED_ROOT)
+    if pose_data_root is None:
+        pose_data_root = str(p.POSE_ROOT)
+    if emotion_data_root is None:
+        emotion_data_root = str(p.EMOTION_ROOT)
     from torch.utils.data import DataLoader
     
     # Criar datasets

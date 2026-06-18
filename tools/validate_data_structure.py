@@ -14,11 +14,15 @@ from pathlib import Path
 from typing import Dict, List, Set, Tuple
 import numpy as np
 
+from src import paths as p
+
 
 class DataStructureValidator:
     """Validador de estrutura de dados."""
     
-    def __init__(self, project_root: str = "."):
+    def __init__(self, project_root: str = None):
+        if project_root is None:
+            project_root = str(p.PROJECT_ROOT)
         self.project_root = Path(project_root)
         self.errors = []
         self.warnings = []
@@ -77,7 +81,7 @@ class DataStructureValidator:
         print("\n[1/4] Validando datasets originais...")
         
         # RWF-2000
-        rwf_path = self.project_root / "dataset" / "RWF-2000"
+        rwf_path = p.RWF2000_ROOT
         if rwf_path.exists():
             for split in ["train", "val"]:
                 split_path = rwf_path / split
@@ -99,14 +103,14 @@ class DataStructureValidator:
             self.warnings.append("Dataset RWF-2000 não encontrado (obrigatório para treinamento)")
         
         # UCF101 (opcional)
-        ucf_path = self.project_root / "dataset" / "UCF101"
+        ucf_path = p.UCF101_ROOT
         if ucf_path.exists():
             self.info.append("Dataset UCF101 encontrado (opcional para pré-treinamento)")
         else:
             self.info.append("Dataset UCF101 não encontrado (opcional)")
         
         # AffectNet (opcional)
-        affect_path = self.project_root / "dataset" / "AffectNet"
+        affect_path = p.AFFECTNET_ROOT
         if affect_path.exists():
             self.info.append("Dataset AffectNet encontrado (opcional para treinar EmotionNet)")
         else:
@@ -116,7 +120,7 @@ class DataStructureValidator:
         """Valida estrutura de dados processados."""
         print("\n[2/4] Validando dados processados...")
         
-        data_root = self.project_root / "data"
+        data_root = p.DATA_ROOT
         
         # Raw videos
         raw_path = data_root / "raw"
@@ -184,9 +188,9 @@ class DataStructureValidator:
         """Valida correspondência entre modalidades."""
         print("\n[3/4] Validando correspondência entre modalidades...")
         
-        pose_path = self.project_root / "data" / "pose" / "rwf2000"
-        emotion_path = self.project_root / "data" / "emotion" / "rwf2000"
-        processed_path = self.project_root / "data" / "processed"
+        pose_path = p.POSE_ROOT / "rwf2000"
+        emotion_path = p.EMOTION_ROOT / "rwf2000"
+        processed_path = p.PROCESSED_ROOT
         
         if not pose_path.exists():
             self.warnings.append("Não é possível validar correspondência: pose não encontrado")
@@ -250,8 +254,8 @@ class DataStructureValidator:
         """Valida formato e shape dos arquivos."""
         print("\n[4/4] Validando formato de arquivos...")
         
-        pose_path = self.project_root / "data" / "pose" / "rwf2000"
-        emotion_path = self.project_root / "data" / "emotion" / "rwf2000"
+        pose_path = p.POSE_ROOT / "rwf2000"
+        emotion_path = p.EMOTION_ROOT / "rwf2000"
         
         # Validar arquivos de pose
         if pose_path.exists():

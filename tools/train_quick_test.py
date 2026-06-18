@@ -11,26 +11,30 @@ import argparse
 import sys
 from pathlib import Path
 
-# Adicionar src ao path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.training.train import train
+from src import paths as p
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Treinamento rápido para teste")
     parser.add_argument(
         "--processed_data_root",
         type=str,
-        default="data/processed",
-        help="Raiz dos dados processados (padrão: 'data/processed')"
+        default=None,
+        help="Raiz dos dados processados"
     )
     parser.add_argument(
         "--results_root",
         type=str,
-        default="results/models",
+        default=None,
         help="Raiz dos resultados, onde ficará best_model.pth"
     )
     args = parser.parse_args()
+    if args.processed_data_root is None:
+        args.processed_data_root = str(p.PROCESSED_ROOT)
+    if args.results_root is None:
+        args.results_root = str(p.MODELS_ROOT)
 
     print("="*60)
     print("TREINAMENTO RÁPIDO - TESTE (10 ÉPOCAS)")
@@ -53,7 +57,7 @@ if __name__ == "__main__":
         dropout=0.5,
         num_workers=2,  # Reduzido para economizar recursos
         device=None,  # Auto-detecta (CPU ou GPU)
-        save_dir=str(Path(__file__).resolve().parent.parent / "results" / "models"),
+        save_dir=args.results_root,
         seed=42,
         early_stopping_patience=5,  # Para mais cedo se não melhorar
         use_scheduler=True

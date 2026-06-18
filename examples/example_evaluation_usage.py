@@ -9,6 +9,7 @@ from src.evaluation.performance_eval import PerformanceEvaluator
 from src.evaluation.limitations_analysis import LimitationsAnalyzer
 from src.models.resnet_lstm import create_model as create_video_model
 from src.datasets.surveillance_dataset import get_dataloaders
+from src import paths as p
 
 
 def example_basic_metrics():
@@ -26,7 +27,7 @@ def example_basic_metrics():
     
     # Carregar dataset
     _, _, test_loader = get_dataloaders(
-        processed_data_root="data/processed",
+        processed_data_root=str(p.PROCESSED_ROOT),
         batch_size=8,
         num_frames=16
     )
@@ -42,7 +43,7 @@ def example_basic_metrics():
     
     # Salvar resultados
     calculator.save_results(
-        "results/experiments/example",
+        str(p.EXPERIMENTS_ROOT / "example"),
         "baseline",
         metrics,
         y_true,
@@ -73,12 +74,12 @@ def example_robustness():
     
     results = robustness_eval.evaluate_all_distortions(
         test_configs,
-        "results/experiments/example",
+        str(p.EXPERIMENTS_ROOT / "example"),
         "robustness_test"
     )
     
     print("✓ Robustness tests completed")
-    print(f"Results saved to: results/experiments/example/robustness_test/")
+    print(f"Results saved to: {p.EXPERIMENTS_ROOT / 'example' / 'robustness_test' / ''}")
 
 
 def example_performance():
@@ -123,7 +124,7 @@ def example_limitations():
     
     # Analisar erros
     analysis = limitations_analyzer.analyze_errors(
-        "results/experiments/example",
+        str(p.EXPERIMENTS_ROOT / "example"),
         "limitations_test",
         save_examples=True
     )
@@ -134,7 +135,7 @@ def example_limitations():
     
     # Gerar relatório
     report = limitations_analyzer.generate_error_report(
-        "results/experiments/example",
+        str(p.EXPERIMENTS_ROOT / "example"),
         "error_report"
     )
     
@@ -163,7 +164,7 @@ if __name__ == "__main__":
         
         print("\n⚠ Descomente um dos exemplos acima para executar")
         print("\nOu use o script principal:")
-        print("  python run_evaluation.py --model baseline --model_path results/models/best_model.pth --all")
+        print(f"  python run_evaluation.py --model baseline --model_path {p.MODELS_ROOT / 'best_model.pth'} --all")
         
     except Exception as e:
         print(f"\nErro: {e}")

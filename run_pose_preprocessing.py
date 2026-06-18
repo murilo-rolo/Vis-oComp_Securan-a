@@ -18,6 +18,7 @@ Uso:
 import argparse
 from pathlib import Path
 from src.pose.extract_pose import process_dataset_for_pose
+from src import paths as p
 
 
 def main():
@@ -36,15 +37,15 @@ def main():
     parser.add_argument(
         "--dataset_root",
         type=str,
-        default="dataset",
-        help="Diretório raiz dos datasets (padrão: 'dataset')"
+        default=None,
+        help="Diretório raiz dos datasets"
     )
     
     parser.add_argument(
         "--output_root",
         type=str,
-        default="data/pose",
-        help="Diretório raiz de saída para keypoints (padrão: 'data/pose')"
+        default=None,
+        help="Diretório raiz de saída para keypoints"
     )
     
     parser.add_argument(
@@ -85,6 +86,10 @@ def main():
     )
     
     args = parser.parse_args()
+    if args.dataset_root is None:
+        args.dataset_root = str(p.DATASET_ROOT)
+    if args.output_root is None:
+        args.output_root = str(p.POSE_ROOT)
     
     # Validar limites dos parâmetros de confiança
     if not (0.0 <= args.min_detection_confidence <= 1.0):

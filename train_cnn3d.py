@@ -17,6 +17,7 @@ from src.datasets.video3d_dataset import (
     get_rwf2000_3d_dataloaders
 )
 from src.training.utils import run_epoch
+from src import paths as p
 
 
 def _permute_clips(batch):
@@ -305,8 +306,8 @@ def main():
     parser.add_argument(
         "--dataset_root",
         type=str,
-        default="dataset",
-        help="Raiz dos datasets (padrão: 'dataset')"
+        default=None,
+        help="Raiz dos datasets"
     )
     
     # Modelo
@@ -377,7 +378,7 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="results/cnn3d",
+        default=None,
         help="Diretório para salvar checkpoints"
     )
     
@@ -396,6 +397,11 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    if args.dataset_root is None:
+        args.dataset_root = str(p.DATASET_ROOT)
+    if args.output_dir is None:
+        args.output_dir = str(p.CNN3D_ROOT)
     
     # Converter clip_size para tupla
     args.clip_size = tuple(args.clip_size)

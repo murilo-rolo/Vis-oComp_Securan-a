@@ -5,6 +5,7 @@ Exemplos de uso do pipeline de inferência em tempo real.
 import torch
 from src.inference.realtime_risk_detector import create_realtime_detector
 from src.inference.multi_camera_detector import create_multi_camera_detector
+from src import paths as p
 
 
 def example_single_webcam():

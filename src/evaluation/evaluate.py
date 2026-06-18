@@ -27,12 +27,11 @@ from sklearn.metrics import (
 from tqdm import tqdm
 import sys
 
-# Adicionar src ao path para imports
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from src.models import create_model
 from src.datasets import get_dataloaders
+from src import paths as p
 
 
 def evaluate_model(
@@ -169,12 +168,12 @@ def save_report(metrics: dict, output_path: Path, format: str = "both"):
 
 def evaluate(
     model_path: str,
-    processed_data_root: str = "data/processed",
+    processed_data_root: str = None,
     batch_size: int = 8,
     num_frames: int = 16,
     num_workers: int = 4,
     device: str = None,
-    output_dir: str = "results/reports",
+    output_dir: str = None,
     seed: int = 42
 ):
     """
@@ -190,6 +189,11 @@ def evaluate(
         output_dir: Diretório para salvar relatórios
         seed: Seed para reprodutibilidade
     """
+    if processed_data_root is None:
+        processed_data_root = str(p.PROCESSED_ROOT)
+    if output_dir is None:
+        output_dir = str(p.REPORTS_ROOT)
+
     # Configurar device
     if device is None:
         device = "cuda" if torch.cuda.is_available() else "cpu"
@@ -258,7 +262,7 @@ def main():
     parser.add_argument(
         "--processed_data_root",
         type=str,
-        default="data/processed",
+        default=None,
         help="Raiz dos dados processados"
     )
     parser.add_argument(
@@ -288,7 +292,7 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="results/reports",
+        default=None,
         help="Diretório para salvar relatórios"
     )
     parser.add_argument(
@@ -299,6 +303,11 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    if args.processed_data_root is None:
+        args.processed_data_root = str(p.PROCESSED_ROOT)
+    if args.output_dir is None:
+        args.output_dir = str(p.REPORTS_ROOT)
     
     evaluate(
         model_path=args.model_path,

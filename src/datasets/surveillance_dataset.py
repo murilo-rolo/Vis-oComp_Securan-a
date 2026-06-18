@@ -15,6 +15,8 @@ from typing import Tuple, Optional, List, Callable
 import random
 import warnings
 
+from src import paths as p
+
 
 class SurveillanceRiskDataset(Dataset):
     """
@@ -32,7 +34,7 @@ class SurveillanceRiskDataset(Dataset):
     
     def __init__(
         self,
-        processed_data_root: str = "data/processed",
+        processed_data_root: str = None,
         split: str = "train",
         num_frames: int = 16,
         transform: Optional[Callable] = None,
@@ -54,6 +56,8 @@ class SurveillanceRiskDataset(Dataset):
                                  val e test usando esta proporção (padrão: 0.5 = 50/50)
             seed: Seed para reprodutibilidade
         """
+        if processed_data_root is None:
+            processed_data_root = str(p.PROCESSED_ROOT)
         self.processed_data_root = Path(processed_data_root)
         self.split = split
         self.num_frames = num_frames
@@ -92,7 +96,7 @@ class SurveillanceRiskDataset(Dataset):
         
         # Tentar usar diretamente do dataset original RWF-2000
         # Estrutura: dataset/RWF-2000/train|val/Fight|NonFight/
-        original_dataset_path = Path("dataset/RWF-2000")
+        original_dataset_path = p.RWF2000_ROOT
         if original_dataset_path.exists() and self.use_original_split:
             # Verificar se temos frames processados no formato original
             processed_from_original = self.processed_data_root / "rwf2000"
@@ -270,7 +274,7 @@ class SurveillanceRiskDataset(Dataset):
 
 
 def get_dataloaders(
-    processed_data_root: str = "data/processed",
+    processed_data_root: str = None,
     batch_size: int = 8,
     num_frames: int = 16,
     num_workers: int = 4,
@@ -301,6 +305,9 @@ def get_dataloaders(
     Returns:
         Tupla (train_loader, val_loader, test_loader)
     """
+    if processed_data_root is None:
+        processed_data_root = str(p.PROCESSED_ROOT)
+
     # Criar datasets
     train_dataset = SurveillanceRiskDataset(
         processed_data_root=processed_data_root,

@@ -9,6 +9,7 @@ Este script demonstra como:
 
 import torch
 from src.pose.pose_dataset import PoseSequenceDataset, get_pose_dataloaders
+from src import paths as p
 
 
 def example_basic_usage():
@@ -19,7 +20,7 @@ def example_basic_usage():
     
     # Criar dataset
     dataset = PoseSequenceDataset(
-        pose_data_root="data/pose",
+        pose_data_root=str(p.POSE_ROOT),
         split="train",
         window_size=16,
         normalize=True,
@@ -48,7 +49,7 @@ def example_dataloader():
     
     # Criar DataLoaders
     train_loader, val_loader, test_loader = get_pose_dataloaders(
-        pose_data_root="data/pose",
+        pose_data_root=str(p.POSE_ROOT),
         batch_size=8,
         window_size=16,
         normalize=True,
@@ -81,7 +82,7 @@ def example_flatten_mode():
     print("=" * 60)
     
     dataset = PoseSequenceDataset(
-        pose_data_root="data/pose",
+        pose_data_root=str(p.POSE_ROOT),
         split="train",
         window_size=16,
         normalize=True,
@@ -125,7 +126,7 @@ def example_model_usage():
     
     # Obter um batch
     train_loader, _, _ = get_pose_dataloaders(
-        pose_data_root="data/pose",
+        pose_data_root=str(p.POSE_ROOT),
         batch_size=4,
         window_size=16,
         flatten=True,  # Usar flatten para LSTM
@@ -147,8 +148,8 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("Exemplos de Uso do Módulo de Pose Estimation")
     print("=" * 60)
-    print("\nCertifique-se de ter executado run_pose_preprocessing.py primeiro!")
-    print("Os dados de pose devem estar em data/pose/\n")
+    print(f"\nCertifique-se de ter executado run_pose_preprocessing.py primeiro!")
+    print(f"Os dados de pose devem estar em {p.POSE_ROOT}/\n")
     
     try:
         example_basic_usage()
@@ -161,9 +162,9 @@ if __name__ == "__main__":
         print("=" * 60)
     except FileNotFoundError as e:
         print(f"\nErro: {e}")
-        print("\nCertifique-se de:")
+        print(f"\nCertifique-se de:")
         print("  1. Executar run_pose_preprocessing.py primeiro")
-        print("  2. Verificar se os dados estão em data/pose/")
+        print(f"  2. Verificar se os dados estão em {p.POSE_ROOT}/")
     except Exception as e:
         print(f"\nErro inesperado: {e}")
         import traceback

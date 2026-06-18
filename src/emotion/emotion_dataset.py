@@ -15,6 +15,8 @@ from typing import Tuple, Optional, List, Callable
 import numpy as np
 import random
 
+from src import paths as p
+
 
 class EmotionSequenceDataset(Dataset):
     """
@@ -285,7 +287,7 @@ class EmotionSequenceDataset(Dataset):
 
 
 def get_emotion_dataloaders(
-    emotion_data_root: str = "data/emotion",
+    emotion_data_root: str = None,
     batch_size: int = 8,
     window_size: int = 16,
     stride: int = 1,
@@ -323,6 +325,9 @@ def get_emotion_dataloaders(
     Returns:
         Tupla (train_loader, val_loader, test_loader)
     """
+    if emotion_data_root is None:
+        emotion_data_root = str(p.EMOTION_ROOT)
+
     # Criar datasets
     train_dataset = EmotionSequenceDataset(
         emotion_data_root=emotion_data_root,

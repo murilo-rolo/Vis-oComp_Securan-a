@@ -14,6 +14,7 @@ from src.datasets.video3d_dataset import (
     get_ucf101_dataloaders,
     get_rwf2000_3d_dataloaders
 )
+from src import paths as p
 
 
 def example_create_model():
@@ -95,7 +96,7 @@ def example_load_pretrained():
     )
     
     # Carregar checkpoint pré-treinado em UCF101
-    checkpoint_path = "results/cnn3d/ucf101/best_model.pth"
+    checkpoint_path = str(p.CNN3D_ROOT / "ucf101" / "best_model.pth")
     
     try:
         model_with_pretrained = create_cnn3d_model(
@@ -120,7 +121,7 @@ def example_dataloader():
     try:
         # UCF101
         train_loader, test_loader = get_ucf101_dataloaders(
-            dataset_root="dataset/UCF101",
+            dataset_root=str(p.UCF101_ROOT),
             batch_size=2,
             num_frames=16,
             clip_size=(112, 112),
@@ -138,13 +139,13 @@ def example_dataloader():
         print(f"Label: {label.tolist()}")
         
     except FileNotFoundError:
-        print("⚠ Dataset UCF101 não encontrado")
-        print("  Certifique-se de que está em dataset/UCF101/")
+        print(f"⚠ Dataset UCF101 não encontrado em {p.UCF101_ROOT}")
+        print("  Certifique-se de que o dataset está no local correto")
     
     try:
         # RWF-2000
         train_loader, val_loader = get_rwf2000_3d_dataloaders(
-            dataset_root="dataset/RWF-2000",
+            dataset_root=str(p.RWF2000_ROOT),
             batch_size=2,
             num_frames=16,
             clip_size=(112, 112),
@@ -162,8 +163,8 @@ def example_dataloader():
         print(f"Label: {label.tolist()}")
         
     except FileNotFoundError:
-        print("\n⚠ Dataset RWF-2000 não encontrado")
-        print("  Certifique-se de que está em dataset/RWF-2000/")
+        print(f"\n⚠ Dataset RWF-2000 não encontrado em {p.RWF2000_ROOT}")
+        print("  Certifique-se de que o dataset está no local correto")
 
 
 if __name__ == "__main__":

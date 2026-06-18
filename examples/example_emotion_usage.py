@@ -10,6 +10,7 @@ Este script demonstra como:
 
 import torch
 from src.emotion.emotion_dataset import EmotionSequenceDataset, get_emotion_dataloaders
+from src import paths as p
 
 
 def example_basic_usage():
@@ -20,7 +21,7 @@ def example_basic_usage():
     
     # Criar dataset
     dataset = EmotionSequenceDataset(
-        emotion_data_root="data/emotion",
+        emotion_data_root=str(p.EMOTION_ROOT),
         split="train",
         window_size=16,
         normalize=False,  # Emoções já são probabilidades
@@ -49,7 +50,7 @@ def example_dataloader():
     
     # Criar DataLoaders
     train_loader, val_loader, test_loader = get_emotion_dataloaders(
-        emotion_data_root="data/emotion",
+        emotion_data_root=str(p.EMOTION_ROOT),
         batch_size=8,
         window_size=16,
         normalize=False,
@@ -108,7 +109,7 @@ def example_model_usage():
     
     # Obter um batch
     train_loader, _, _ = get_emotion_dataloaders(
-        emotion_data_root="data/emotion",
+        emotion_data_root=str(p.EMOTION_ROOT),
         batch_size=4,
         window_size=16,
         dataset_name="rwf2000"
@@ -160,8 +161,8 @@ if __name__ == "__main__":
     print("\n" + "=" * 60)
     print("Exemplos de Uso do Módulo de Emotion Recognition")
     print("=" * 60)
-    print("\nCertifique-se de ter executado run_emotion_preprocessing.py primeiro!")
-    print("Os dados de emoção devem estar em data/emotion/\n")
+    print(f"\nCertifique-se de ter executado run_emotion_preprocessing.py primeiro!")
+    print(f"Os dados de emoção devem estar em {p.EMOTION_ROOT}/\n")
     
     try:
         example_basic_usage()
@@ -174,9 +175,9 @@ if __name__ == "__main__":
         print("=" * 60)
     except FileNotFoundError as e:
         print(f"\nErro: {e}")
-        print("\nCertifique-se de:")
+        print(f"\nCertifique-se de:")
         print("  1. Executar run_emotion_preprocessing.py primeiro")
-        print("  2. Verificar se os dados estão em data/emotion/")
+        print(f"  2. Verificar se os dados estão em {p.EMOTION_ROOT}/")
     except Exception as e:
         print(f"\nErro inesperado: {e}")
         import traceback

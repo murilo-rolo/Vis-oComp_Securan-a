@@ -21,6 +21,7 @@ from src.models.multimodal_risk import create_multimodal_model
 from src.models.resnet_lstm import ResNetLSTM
 from src.datasets.surveillance_dataset import get_dataloaders as get_baseline_dataloaders
 from src.datasets.multimodal_dataset import get_multimodal_dataloaders
+from src import paths as p
 
 
 def evaluate_model(model, dataloader, device, is_multimodal=False, video_model=None):
@@ -144,31 +145,31 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="results/comparison",
+        default=None,
         help="Diretório para salvar resultados"
     )
     parser.add_argument(
         "--processed_data_root",
         type=str,
-        default="data/processed",
+        default=None,
         help="Raiz dos dados processados (baseline)"
     )
     parser.add_argument(
         "--video_data_root",
         type=str,
-        default="data/processed",
+        default=None,
         help="Raiz dos dados de vídeo (multimodal)"
     )
     parser.add_argument(
         "--pose_data_root",
         type=str,
-        default="data/pose",
+        default=None,
         help="Raiz dos dados de pose"
     )
     parser.add_argument(
         "--emotion_data_root",
         type=str,
-        default="data/emotion",
+        default=None,
         help="Raiz dos dados de emoção"
     )
     parser.add_argument(
@@ -179,6 +180,16 @@ def main():
     )
     
     args = parser.parse_args()
+    if args.output_dir is None:
+        args.output_dir = str(p.COMPARISON_ROOT)
+    if args.processed_data_root is None:
+        args.processed_data_root = str(p.PROCESSED_ROOT)
+    if args.video_data_root is None:
+        args.video_data_root = str(p.PROCESSED_ROOT)
+    if args.pose_data_root is None:
+        args.pose_data_root = str(p.POSE_ROOT)
+    if args.emotion_data_root is None:
+        args.emotion_data_root = str(p.EMOTION_ROOT)
     
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

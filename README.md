@@ -52,6 +52,7 @@ Este projeto foi desenvolvido como parte de um trabalho de mestrado em Visão Co
 - **Otimizado para Recursos Limitados**: Suporta treinamento em CPUs e GPUs
 - **Métricas Detalhadas**: Gera relatórios completos de avaliação
 - **Código modular**: Funções de treino/validação centralizadas em `src/training/utils.py`
+- **Gerenciamento Centralizado de Caminhos**: `src/paths.py` detecta automaticamente o ambiente (local ou Google Colab) e configura todos os diretórios do projeto
 
 ## Datasets
 
@@ -630,6 +631,7 @@ cv-security-threat-detection/
 │   ├── pose/                  # Keypoints de pose
 │   └── emotion/               # Vetores de emoção
 ├── src/
+│   ├── paths.py                # Gerenciamento centralizado de caminhos
 │   ├── preprocessing/          # Pré-processamento
 │   │   ├── organize_videos.py
 │   │   └── extract_frames.py

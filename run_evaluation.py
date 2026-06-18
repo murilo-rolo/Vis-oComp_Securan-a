@@ -26,6 +26,7 @@ from src.models.resnet_lstm import create_model as create_video_model
 from src.models.multimodal_risk import create_multimodal_model
 from src.datasets.surveillance_dataset import get_dataloaders
 from src.datasets.multimodal_dataset import get_multimodal_dataloaders
+from src import paths as p
 
 
 def load_model(model_type: str, model_path: str, device: str):
@@ -100,19 +101,19 @@ def main():
     parser.add_argument(
         "--data_root",
         type=str,
-        default="data/processed",
+        default=None,
         help="Raiz dos dados processados"
     )
     parser.add_argument(
         "--pose_data_root",
         type=str,
-        default="data/pose",
+        default=None,
         help="Raiz dos dados de pose"
     )
     parser.add_argument(
         "--emotion_data_root",
         type=str,
-        default="data/emotion",
+        default=None,
         help="Raiz dos dados de emoção"
     )
     parser.add_argument(
@@ -153,7 +154,7 @@ def main():
     parser.add_argument(
         "--output_dir",
         type=str,
-        default="results/experiments",
+        default=None,
         help="Diretório de saída"
     )
     parser.add_argument(
@@ -172,6 +173,14 @@ def main():
     )
     
     args = parser.parse_args()
+    if args.data_root is None:
+        args.data_root = str(p.PROCESSED_ROOT)
+    if args.pose_data_root is None:
+        args.pose_data_root = str(p.POSE_ROOT)
+    if args.emotion_data_root is None:
+        args.emotion_data_root = str(p.EMOTION_ROOT)
+    if args.output_dir is None:
+        args.output_dir = str(p.EXPERIMENTS_ROOT)
     
     # Definir experimentos a executar
     if args.all:

@@ -12,6 +12,8 @@ import argparse
 from pathlib import Path
 import shutil
 
+from src import paths as p
+
 # Classes a manter
 CLASSES_TO_KEEP = [
     # Classes RELEVANTES
@@ -28,7 +30,7 @@ CLASSES_TO_KEEP = [
 ]
 
 # Caminho do dataset (sobrescrito pelo argparse)
-DATASET_ROOT = Path("dataset/UCF101")
+DATASET_ROOT = None
 SPLITS = ["train", "test", "val"]
 
 
@@ -167,10 +169,12 @@ def main():
     parser.add_argument(
         "--dataset_root",
         type=str,
-        default="dataset/UCF101",
-        help="Diretório raiz do dataset UCF101 (padrão: 'dataset/UCF101')"
+        default=None,
+        help="Diretório raiz do dataset UCF101"
     )
     args = parser.parse_args()
+    if args.dataset_root is None:
+        args.dataset_root = str(p.UCF101_ROOT)
     DATASET_ROOT = Path(args.dataset_root)
 
     print("="*60)

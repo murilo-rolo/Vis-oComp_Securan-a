@@ -9,16 +9,16 @@ import torch.optim as optim
 from pathlib import Path
 import sys
 
-project_root = Path(__file__).parent.parent.parent
-sys.path.insert(0, str(project_root))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 
 from src.models import create_model
 from src.datasets import get_dataloaders
 from src.training.utils import run_epoch, setup_device, set_seed
+from src import paths as p
 
 
 def train(
-    processed_data_root: str = "data/processed",
+    processed_data_root: str = None,
     batch_size: int = 8,
     num_frames: int = 16,
     num_epochs: int = 50,
@@ -28,7 +28,7 @@ def train(
     dropout: float = 0.5,
     num_workers: int = 4,
     device: str = None,
-    save_dir: str = "results/models",
+    save_dir: str = None,
     seed: int = 42,
     early_stopping_patience: int = 10,
     use_scheduler: bool = True
@@ -144,7 +144,7 @@ def main():
     parser.add_argument(
         "--processed_data_root",
         type=str,
-        default="data/processed",
+        default=None,
         help="Raiz dos dados processados"
     )
     parser.add_argument(
@@ -204,7 +204,7 @@ def main():
     parser.add_argument(
         "--save_dir",
         type=str,
-        default="results/models",
+        default=None,
         help="Diretório para salvar modelos"
     )
     parser.add_argument(
@@ -233,6 +233,11 @@ def main():
     )
     
     args = parser.parse_args()
+    
+    if args.processed_data_root is None:
+        args.processed_data_root = str(p.PROCESSED_ROOT)
+    if args.save_dir is None:
+        args.save_dir = str(p.MODELS_ROOT)
     
     train(
         processed_data_root=args.processed_data_root,

@@ -11,6 +11,7 @@ import torch
 from src.models.multimodal_risk import create_multimodal_model
 from src.datasets.multimodal_dataset import get_multimodal_dataloaders
 from src.models.resnet_lstm import create_model as create_video_model
+from src import paths as p
 
 
 def example_load_data():
@@ -20,9 +21,9 @@ def example_load_data():
     print("=" * 60)
     
     train_loader, val_loader, test_loader = get_multimodal_dataloaders(
-        video_data_root="data/processed",
-        pose_data_root="data/pose",
-        emotion_data_root="data/emotion",
+        video_data_root=str(p.PROCESSED_ROOT),
+        pose_data_root=str(p.POSE_ROOT),
+        emotion_data_root=str(p.EMOTION_ROOT),
         batch_size=4,
         num_frames=16,
         window_size=16,
@@ -142,9 +143,9 @@ def example_training_loop():
     
     # Criar DataLoader
     train_loader, _, _ = get_multimodal_dataloaders(
-        video_data_root="data/processed",
-        pose_data_root="data/pose",
-        emotion_data_root="data/emotion",
+        video_data_root=str(p.PROCESSED_ROOT),
+        pose_data_root=str(p.POSE_ROOT),
+        emotion_data_root=str(p.EMOTION_ROOT),
         batch_size=2,
         num_frames=16,
         window_size=16,
@@ -195,7 +196,7 @@ if __name__ == "__main__":
         print("=" * 60)
     except FileNotFoundError as e:
         print(f"\nErro: {e}")
-        print("\nCertifique-se de ter executado:")
+        print(f"\nCertifique-se de ter executado:")
         print("  1. run_preprocessing.py (para vídeo)")
         print("  2. run_pose_preprocessing.py (para pose)")
         print("  3. run_emotion_preprocessing.py (para emoção)")

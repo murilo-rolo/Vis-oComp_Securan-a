@@ -28,13 +28,17 @@ from pathlib import Path
 from typing import List, Optional
 import os
 
+from src import paths as p
+
 
 class TrainingPipeline:
     """Orquestrador do pipeline de treinamento."""
     
-    def __init__(self, project_root: str = ".", force_retrain: bool = False):
+    def __init__(self, project_root: str = None, force_retrain: bool = False):
+        if project_root is None:
+            project_root = str(p.PROJECT_ROOT)
         self.project_root = Path(project_root)
-        self.results_dir = self.project_root / "results"
+        self.results_dir = p.RESULTS_ROOT
         self.steps_completed = []
         self.steps_failed = []
         self.force_retrain = force_retrain
@@ -87,7 +91,7 @@ class TrainingPipeline:
         checks = []
         
         # Verificar se datasets existem
-        rwf_path = self.project_root / "dataset" / "RWF-2000"
+        rwf_path = p.RWF2000_ROOT
         if rwf_path.exists():
             print("✅ Dataset RWF-2000 encontrado")
             checks.append(True)
@@ -96,7 +100,7 @@ class TrainingPipeline:
             checks.append(False)
         
         # Verificar se dados processados existem
-        processed_path = self.project_root / "data" / "processed"
+        processed_path = p.PROCESSED_ROOT
         if processed_path.exists():
             print("✅ Dados processados encontrados")
             checks.append(True)
@@ -105,7 +109,7 @@ class TrainingPipeline:
             checks.append(False)
         
         # Verificar se pose existe
-        pose_path = self.project_root / "data" / "pose" / "rwf2000"
+        pose_path = p.POSE_ROOT / "rwf2000"
         if pose_path.exists():
             print("✅ Dados de pose encontrados")
             checks.append(True)
@@ -114,7 +118,7 @@ class TrainingPipeline:
             checks.append(False)
         
         # Verificar se emoção existe
-        emotion_path = self.project_root / "data" / "emotion" / "rwf2000"
+        emotion_path = p.EMOTION_ROOT / "rwf2000"
         if emotion_path.exists():
             print("✅ Dados de emoção encontrados")
             checks.append(True)
@@ -430,15 +434,21 @@ Exemplos de uso:
                        choices=["early", "late", "attention"],
                        help="Método de fusão para multimodal (padrão: late)")
     
-    # Caminhos de datasets
-    parser.add_argument("--affectnet_path", type=str, default="dataset/AffectNet",
+        # Caminhos de datasets
+    parser.add_argument("--affectnet_path", type=str, default=None,
                        help="Caminho para dataset AffectNet")
-    parser.add_argument("--ucf101_path", type=str, default="dataset/UCF101",
+    parser.add_argument("--ucf101_path", type=str, default=None,
                        help="Caminho para dataset UCF101")
-    parser.add_argument("--project_root", type=str, default=".",
-                       help="Diretório raiz do projeto (padrão: '.')")
+    parser.add_argument("--project_root", type=str, default=None,
+                       help="Diretório raiz do projeto")
     
     args = parser.parse_args()
+    if args.affectnet_path is None:
+        args.affectnet_path = str(p.AFFECTNET_ROOT)
+    if args.ucf101_path is None:
+        args.ucf101_path = str(p.UCF101_ROOT)
+    if args.project_root is None:
+        args.project_root = str(p.PROJECT_ROOT)
     
     # Criar pipeline
     pipeline = TrainingPipeline(project_root=args.project_root, force_retrain=args.force_retrain)

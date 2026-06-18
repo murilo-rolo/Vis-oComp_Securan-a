@@ -19,6 +19,8 @@ from tqdm import tqdm
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from functools import partial
 
+from src import paths as p
+
 
 def extract_frames_from_video(
     video_path: Path,
@@ -236,8 +238,8 @@ def process_videos(
 
 
 def preprocess_dataset(
-    raw_data_root: str = "data/raw",
-    processed_data_root: str = "data/processed",
+    raw_data_root: str = None,
+    processed_data_root: str = None,
     num_frames: int = 16,
     target_size: Tuple[int, int] = (112, 112),
     normalize: bool = True
@@ -252,6 +254,10 @@ def preprocess_dataset(
         target_size: Tamanho (altura, largura) para redimensionar
         normalize: Se True, normaliza valores para [0, 1]
     """
+    if raw_data_root is None:
+        raw_data_root = str(p.RAW_DATA_ROOT)
+    if processed_data_root is None:
+        processed_data_root = str(p.PROCESSED_ROOT)
     raw_path = Path(raw_data_root)
     processed_path = Path(processed_data_root)
     

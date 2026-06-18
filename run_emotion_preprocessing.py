@@ -17,6 +17,7 @@ import torch
 from pathlib import Path
 from src.models.emotion_cnn import create_emotion_model
 from src.emotion.extract_emotion import process_dataset_for_emotion
+from src import paths as p
 
 
 def main():
@@ -35,15 +36,15 @@ def main():
     parser.add_argument(
         "--dataset_root",
         type=str,
-        default="dataset",
-        help="Diretório raiz dos datasets (padrão: 'dataset')"
+        default=None,
+        help="Diretório raiz dos datasets"
     )
     
     parser.add_argument(
         "--output_root",
         type=str,
-        default="data/emotion",
-        help="Diretório raiz de saída para vetores de emoção (padrão: 'data/emotion')"
+        default=None,
+        help="Diretório raiz de saída para vetores de emoção"
     )
     
     parser.add_argument(
@@ -84,6 +85,10 @@ def main():
     )
     
     args = parser.parse_args()
+    if args.dataset_root is None:
+        args.dataset_root = str(p.DATASET_ROOT)
+    if args.output_root is None:
+        args.output_root = str(p.EMOTION_ROOT)
     
     # Validar diretórios
     dataset_root = Path(args.dataset_root)

@@ -15,6 +15,8 @@ import cv2
 import numpy as np
 from torchvision import transforms
 
+from src import paths as p
+
 
 class UCF101Dataset(Dataset):
     """
@@ -35,7 +37,7 @@ class UCF101Dataset(Dataset):
     
     def __init__(
         self,
-        dataset_root: str = "dataset/UCF101",
+        dataset_root: str = None,
         split: str = "train",
         num_frames: int = 16,
         clip_size: Tuple[int, int] = (112, 112),
@@ -53,6 +55,8 @@ class UCF101Dataset(Dataset):
             transform: Transformações a aplicar
             sample_stride: Stride para amostragem de frames
         """
+        if dataset_root is None:
+            dataset_root = str(p.UCF101_ROOT)
         self.dataset_root = Path(dataset_root)
         self.split = split
         self.num_frames = num_frames
@@ -207,7 +211,7 @@ class RWF2000Video3DDataset(Dataset):
     
     def __init__(
         self,
-        dataset_root: str = "dataset/RWF-2000",
+        dataset_root: str = None,
         split: str = "train",
         num_frames: int = 16,
         clip_size: Tuple[int, int] = (112, 112),
@@ -225,6 +229,8 @@ class RWF2000Video3DDataset(Dataset):
             transform: Transformações a aplicar
             sample_stride: Stride para amostragem de frames
         """
+        if dataset_root is None:
+            dataset_root = str(p.RWF2000_ROOT)
         self.dataset_root = Path(dataset_root)
         self.split = split
         self.num_frames = num_frames
@@ -350,7 +356,7 @@ class RWF2000Video3DDataset(Dataset):
 
 
 def get_ucf101_dataloaders(
-    dataset_root: str = "dataset/UCF101",
+    dataset_root: str = None,
     batch_size: int = 16,
     num_frames: int = 16,
     clip_size: Tuple[int, int] = (112, 112),
@@ -364,6 +370,8 @@ def get_ucf101_dataloaders(
     Returns:
         Tupla (train_loader, test_loader)
     """
+    if dataset_root is None:
+        dataset_root = str(p.UCF101_ROOT)
     from torch.utils.data import DataLoader
     
     train_dataset = UCF101Dataset(
@@ -402,7 +410,7 @@ def get_ucf101_dataloaders(
 
 
 def get_rwf2000_3d_dataloaders(
-    dataset_root: str = "dataset/RWF-2000",
+    dataset_root: str = None,
     batch_size: int = 8,
     num_frames: int = 16,
     clip_size: Tuple[int, int] = (112, 112),
@@ -416,6 +424,8 @@ def get_rwf2000_3d_dataloaders(
     Returns:
         Tupla (train_loader, val_loader)
     """
+    if dataset_root is None:
+        dataset_root = str(p.RWF2000_ROOT)
     from torch.utils.data import DataLoader
     
     train_dataset = RWF2000Video3DDataset(

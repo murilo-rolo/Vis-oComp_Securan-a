@@ -7,6 +7,8 @@ import shutil
 from pathlib import Path
 from typing import Tuple
 
+from src import paths as p
+
 
 def _list_videos(directory: Path) -> list:
     """Lista arquivos .avi em um diretório, com fallback para os.listdir."""
@@ -105,9 +107,13 @@ def _process_class_videos(split_path: Path, class_name: str, dest_dir: Path,
 
 
 def organize_rwf2000_dataset(
-    dataset_root: str = "dataset/RWF-2000",
-    output_root: str = "data/raw"
+    dataset_root: str = None,
+    output_root: str = None
 ) -> Tuple[int, int]:
+    if dataset_root is None:
+        dataset_root = str(p.RWF2000_ROOT)
+    if output_root is None:
+        output_root = str(p.RAW_DATA_ROOT)
     dataset_path = Path(dataset_root)
     output_path = Path(output_root)
 

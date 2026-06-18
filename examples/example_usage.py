@@ -8,12 +8,12 @@ import torch
 from pathlib import Path
 import sys
 
-# Adicionar src ao path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from src.models import create_model
 from src.datasets import get_dataloaders
 from src.preprocessing import organize_rwf2000_dataset, preprocess_dataset
+from src import paths as p
 
 
 def example_preprocessing():
@@ -25,16 +25,16 @@ def example_preprocessing():
     # Organizar vídeos
     print("\n1. Organizando vídeos...")
     num_violent, num_non_violent = organize_rwf2000_dataset(
-        dataset_root="dataset/RWF-2000",
-        output_root="data/raw"
+        dataset_root=str(p.RWF2000_ROOT),
+        output_root=str(p.RAW_DATA_ROOT)
     )
     print(f"   Organizados: {num_violent} violentos, {num_non_violent} não violentos")
     
     # Extrair frames
     print("\n2. Extraindo frames...")
     preprocess_dataset(
-        raw_data_root="data/raw",
-        processed_data_root="data/processed",
+        raw_data_root=str(p.RAW_DATA_ROOT),
+        processed_data_root=str(p.PROCESSED_ROOT),
         num_frames=16,
         target_size=(112, 112),
         normalize=True
@@ -49,7 +49,7 @@ def example_dataloader():
     print("="*50)
     
     train_loader, val_loader, test_loader = get_dataloaders(
-        processed_data_root="data/processed",
+        processed_data_root=str(p.PROCESSED_ROOT),
         batch_size=4,
         num_frames=16,
         num_workers=0,  # 0 para debug
