@@ -168,31 +168,17 @@ def save_report(metrics: dict, output_path: Path, format: str = "both"):
 
 def evaluate(
     model_path: str,
-    processed_data_root: str = None,
+    processed_data_root: str = str(p.PROCESSED_ROOT),
     batch_size: int = 8,
     num_frames: int = 16,
     num_workers: int = 4,
     device: str = None,
-    output_dir: str = None,
+    output_dir: str = str(p.REPORTS_ROOT),
     seed: int = 42
 ):
     """
     Função principal de avaliação.
-    
-    Args:
-        model_path: Caminho para o modelo treinado (.pth)
-        processed_data_root: Raiz dos dados processados
-        batch_size: Tamanho do batch
-        num_frames: Número de frames por vídeo
-        num_workers: Número de workers para DataLoader
-        device: Device (None = auto)
-        output_dir: Diretório para salvar relatórios
-        seed: Seed para reprodutibilidade
     """
-    if processed_data_root is None:
-        processed_data_root = str(p.PROCESSED_ROOT)
-    if output_dir is None:
-        output_dir = str(p.REPORTS_ROOT)
 
     # Configurar device
     if device is None:
@@ -260,12 +246,6 @@ def main():
         help="Caminho para o modelo treinado (.pth)"
     )
     parser.add_argument(
-        "--processed_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados processados"
-    )
-    parser.add_argument(
         "--batch_size",
         type=int,
         default=8,
@@ -290,12 +270,6 @@ def main():
         help="Device (cuda/cpu). Se None, detecta automaticamente"
     )
     parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Diretório para salvar relatórios"
-    )
-    parser.add_argument(
         "--seed",
         type=int,
         default=42,
@@ -304,22 +278,14 @@ def main():
     
     args = parser.parse_args()
     
-    if args.processed_data_root is None:
-        args.processed_data_root = str(p.PROCESSED_ROOT)
-    if args.output_dir is None:
-        args.output_dir = str(p.REPORTS_ROOT)
-    
     evaluate(
         model_path=args.model_path,
-        processed_data_root=args.processed_data_root,
         batch_size=args.batch_size,
         num_frames=args.num_frames,
         num_workers=args.num_workers,
         device=args.device,
-        output_dir=args.output_dir,
         seed=args.seed
     )
-
 
 if __name__ == "__main__":
     main()

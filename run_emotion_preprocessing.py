@@ -14,7 +14,6 @@ Uso:
 
 import argparse
 import torch
-from pathlib import Path
 from src.models.emotion_cnn import create_emotion_model
 from src.emotion.extract_emotion import process_dataset_for_emotion
 from src import paths as p
@@ -31,20 +30,6 @@ def main():
         choices=["rwf2000"],
         default="rwf2000",
         help="Dataset a processar (padrão: 'rwf2000')"
-    )
-    
-    parser.add_argument(
-        "--dataset_root",
-        type=str,
-        default=None,
-        help="Diretório raiz dos datasets"
-    )
-    
-    parser.add_argument(
-        "--output_root",
-        type=str,
-        default=None,
-        help="Diretório raiz de saída para vetores de emoção"
     )
     
     parser.add_argument(
@@ -85,26 +70,20 @@ def main():
     )
     
     args = parser.parse_args()
-    if args.dataset_root is None:
-        args.dataset_root = str(p.DATASET_ROOT)
-    if args.output_root is None:
-        args.output_root = str(p.EMOTION_ROOT)
     
     # Validar diretórios
-    dataset_root = Path(args.dataset_root)
-    if not dataset_root.exists():
-        print(f"Erro: Diretório de datasets não encontrado: {dataset_root}")
+    if not p.DATASET_ROOT.exists():
+        print(f"Erro: Diretório de datasets não encontrado: {p.DATASET_ROOT}")
         print("  Certifique-se de que o dataset está em 'dataset/RWF-2000'")
         return
     
-    output_root = Path(args.output_root)
-    output_root.mkdir(parents=True, exist_ok=True)
+    p.EMOTION_ROOT.mkdir(parents=True, exist_ok=True)
     
     print("=" * 60)
     print("Pré-processamento de Emotion Recognition")
     print("=" * 60)
-    print(f"Dataset raiz: {dataset_root}")
-    print(f"Saída raiz: {output_root}")
+    print(f"Dataset raiz: {p.DATASET_ROOT}")
+    print(f"Saída raiz: {p.EMOTION_ROOT}")
     print(f"Número de frames: {args.num_frames if args.num_frames else 'Todos'}")
     print(f"Detector de faces: {args.face_detector}")
     print(f"Agregação: {args.aggregation}")
@@ -134,14 +113,14 @@ def main():
     
     # Processar dataset
     if args.dataset == "rwf2000":
-        rwf2000_path = dataset_root / "RWF-2000"
+        rwf2000_path = p.DATASET_ROOT / "RWF-2000"
         if rwf2000_path.exists():
             print("\n" + "=" * 60)
             print("Processando RWF-2000...")
             print("=" * 60)
             process_dataset_for_emotion(
                 dataset_root=str(rwf2000_path),
-                output_root=str(output_root),
+                output_root=str(p.EMOTION_ROOT),
                 model=model,
                 dataset_name="rwf2000",
                 num_frames=args.num_frames,
@@ -155,7 +134,7 @@ def main():
     print("\n" + "=" * 60)
     print("Pré-processamento concluído!")
     print("=" * 60)
-    print(f"\nVetores de emoção salvos em: {output_root}")
+    print(f"\nVetores de emoção salvos em: {p.EMOTION_ROOT}")
     print("\nEstrutura criada:")
     print("  data/emotion/")
     print("    rwf2000/")

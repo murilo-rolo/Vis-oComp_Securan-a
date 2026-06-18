@@ -11,7 +11,6 @@ Este script:
 import argparse
 import torch
 import torch.nn as nn
-from pathlib import Path
 import json
 from sklearn.metrics import accuracy_score, precision_recall_fscore_support, roc_auc_score, confusion_matrix
 import numpy as np
@@ -143,36 +142,6 @@ def main():
         help="Caminho para modelo multimodal"
     )
     parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Diretório para salvar resultados"
-    )
-    parser.add_argument(
-        "--processed_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados processados (baseline)"
-    )
-    parser.add_argument(
-        "--video_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados de vídeo (multimodal)"
-    )
-    parser.add_argument(
-        "--pose_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados de pose"
-    )
-    parser.add_argument(
-        "--emotion_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados de emoção"
-    )
-    parser.add_argument(
         "--device",
         type=str,
         default="cuda" if torch.cuda.is_available() else "cpu",
@@ -180,18 +149,8 @@ def main():
     )
     
     args = parser.parse_args()
-    if args.output_dir is None:
-        args.output_dir = str(p.COMPARISON_ROOT)
-    if args.processed_data_root is None:
-        args.processed_data_root = str(p.PROCESSED_ROOT)
-    if args.video_data_root is None:
-        args.video_data_root = str(p.PROCESSED_ROOT)
-    if args.pose_data_root is None:
-        args.pose_data_root = str(p.POSE_ROOT)
-    if args.emotion_data_root is None:
-        args.emotion_data_root = str(p.EMOTION_ROOT)
     
-    output_dir = Path(args.output_dir)
+    output_dir = p.COMPARISON_ROOT
     output_dir.mkdir(parents=True, exist_ok=True)
     device = torch.device(args.device)
     
@@ -254,16 +213,16 @@ def main():
     # Criar DataLoaders
     print("Criando DataLoaders...")
     _, _, baseline_test_loader = get_baseline_dataloaders(
-        processed_data_root=args.processed_data_root,
+        processed_data_root=str(p.PROCESSED_ROOT),
         batch_size=8,
         num_frames=16,
         num_workers=2
     )
     
     _, _, multimodal_test_loader = get_multimodal_dataloaders(
-        video_data_root=args.video_data_root,
-        pose_data_root=args.pose_data_root,
-        emotion_data_root=args.emotion_data_root,
+        video_data_root=str(p.PROCESSED_ROOT),
+        pose_data_root=str(p.POSE_ROOT),
+        emotion_data_root=str(p.EMOTION_ROOT),
         batch_size=8,
         num_frames=16,
         window_size=16,

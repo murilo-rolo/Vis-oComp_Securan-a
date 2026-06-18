@@ -35,7 +35,7 @@ def pretrain_ucf101(args):
     print("=" * 60)
     
     # Criar diretório de saída
-    output_dir = Path(args.output_dir) / "ucf101"
+    output_dir = p.CNN3D_ROOT / "ucf101"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     device = torch.device(args.device)
@@ -142,7 +142,7 @@ def finetune_rwf2000(args, pretrained_path: Path):
     print("=" * 60)
     
     # Criar diretório de saída
-    output_dir = Path(args.output_dir) / "rwf2000"
+    output_dir = p.CNN3D_ROOT / "rwf2000"
     output_dir.mkdir(parents=True, exist_ok=True)
     
     device = torch.device(args.device)
@@ -302,14 +302,6 @@ def main():
         help="Etapa de treinamento: 'pretrain' (UCF101), 'finetune' (RWF-2000), ou 'both'"
     )
     
-    # Dataset
-    parser.add_argument(
-        "--dataset_root",
-        type=str,
-        default=None,
-        help="Raiz dos datasets"
-    )
-    
     # Modelo
     parser.add_argument(
         "--model_name",
@@ -374,14 +366,6 @@ def main():
         help="Taxa de dropout"
     )
     
-    # Output
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Diretório para salvar checkpoints"
-    )
-    
     # Outros
     parser.add_argument(
         "--num_workers",
@@ -398,17 +382,12 @@ def main():
     
     args = parser.parse_args()
     
-    if args.dataset_root is None:
-        args.dataset_root = str(p.DATASET_ROOT)
-    if args.output_dir is None:
-        args.output_dir = str(p.CNN3D_ROOT)
-    
     # Converter clip_size para tupla
     args.clip_size = tuple(args.clip_size)
     
     if args.stage == "pretrain" or args.stage == "both":
         # Etapa 1: Pré-treinamento
-        args.dataset_root = Path(args.dataset_root) / "UCF101"
+        args.dataset_root = str(p.DATASET_ROOT / "UCF101")
         pretrained_path = pretrain_ucf101(args)
         
         if args.stage == "pretrain":
@@ -424,7 +403,7 @@ def main():
         else:
             raise ValueError("Para fine-tuning, forneça --pretrained_path ou use --stage both")
         
-        args.dataset_root = Path(args.dataset_root) / "RWF-2000"
+        args.dataset_root = str(p.DATASET_ROOT / "RWF-2000")
         finetune_rwf2000(args, pretrained_path)
 
 

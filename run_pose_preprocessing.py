@@ -16,7 +16,6 @@ Uso:
 """
 
 import argparse
-from pathlib import Path
 from src.pose.extract_pose import process_dataset_for_pose
 from src import paths as p
 
@@ -32,20 +31,6 @@ def main():
         choices=["ucf101", "rwf2000", "both"],
         default="both",
         help="Dataset a processar: 'ucf101', 'rwf2000' ou 'both'"
-    )
-    
-    parser.add_argument(
-        "--dataset_root",
-        type=str,
-        default=None,
-        help="Diretório raiz dos datasets"
-    )
-    
-    parser.add_argument(
-        "--output_root",
-        type=str,
-        default=None,
-        help="Diretório raiz de saída para keypoints"
     )
     
     parser.add_argument(
@@ -86,10 +71,6 @@ def main():
     )
     
     args = parser.parse_args()
-    if args.dataset_root is None:
-        args.dataset_root = str(p.DATASET_ROOT)
-    if args.output_root is None:
-        args.output_root = str(p.POSE_ROOT)
     
     # Validar limites dos parâmetros de confiança
     if not (0.0 <= args.min_detection_confidence <= 1.0):
@@ -103,20 +84,18 @@ def main():
         parser.error("--num_frames deve ser um número positivo ou None para processar todos os frames")
     
     # Validar diretórios
-    dataset_root = Path(args.dataset_root)
-    if not dataset_root.exists():
-        print(f"Erro: Diretório de datasets não encontrado: {dataset_root}")
+    if not p.DATASET_ROOT.exists():
+        print(f"Erro: Diretório de datasets não encontrado: {p.DATASET_ROOT}")
         print("  Certifique-se de que os datasets estão em 'dataset/UCF101' e 'dataset/RWF-2000'")
         return
     
-    output_root = Path(args.output_root)
-    output_root.mkdir(parents=True, exist_ok=True)
+    p.POSE_ROOT.mkdir(parents=True, exist_ok=True)
     
     print("=" * 60)
     print("Pré-processamento de Pose Estimation")
     print("=" * 60)
-    print(f"Dataset raiz: {dataset_root}")
-    print(f"Saída raiz: {output_root}")
+    print(f"Dataset raiz: {p.DATASET_ROOT}")
+    print(f"Saída raiz: {p.POSE_ROOT}")
     print(f"Número de frames: {args.num_frames if args.num_frames else 'Todos'}")
     print(f"Confiança detecção: {args.min_detection_confidence} (range: 0.0-1.0)")
     print(f"Confiança rastreamento: {args.min_tracking_confidence} (range: 0.0-1.0)")
@@ -137,14 +116,14 @@ def main():
     
     # Processar datasets
     if args.dataset in ["ucf101", "both"]:
-        ucf101_path = dataset_root / "UCF101"
+        ucf101_path = p.DATASET_ROOT / "UCF101"
         if ucf101_path.exists():
             print("\n" + "=" * 60)
             print("Processando UCF101...")
             print("=" * 60)
             process_dataset_for_pose(
                 dataset_root=str(ucf101_path),
-                output_root=str(output_root),
+                output_root=str(p.POSE_ROOT),
                 dataset_name="ucf101",
                 num_frames=args.num_frames,
                 min_detection_confidence=args.min_detection_confidence,
@@ -156,14 +135,14 @@ def main():
             print("  Pulando processamento de UCF101...")
     
     if args.dataset in ["rwf2000", "both"]:
-        rwf2000_path = dataset_root / "RWF-2000"
+        rwf2000_path = p.DATASET_ROOT / "RWF-2000"
         if rwf2000_path.exists():
             print("\n" + "=" * 60)
             print("Processando RWF-2000...")
             print("=" * 60)
             process_dataset_for_pose(
                 dataset_root=str(rwf2000_path),
-                output_root=str(output_root),
+                output_root=str(p.POSE_ROOT),
                 dataset_name="rwf2000",
                 num_frames=args.num_frames,
                 min_detection_confidence=args.min_detection_confidence,
@@ -177,7 +156,7 @@ def main():
     print("\n" + "=" * 60)
     print("Pré-processamento concluído!")
     print("=" * 60)
-    print(f"\nKeypoints salvos em: {output_root}")
+    print(f"\nKeypoints salvos em: {p.POSE_ROOT}")
     print("\nEstrutura criada:")
     print("  data/pose/")
     if args.dataset in ["ucf101", "both"]:

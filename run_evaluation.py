@@ -97,25 +97,6 @@ def main():
         help="Caminho para modelo de vídeo (ResNetLSTM) - necessário para multimodal com fusão 'late'"
     )
     
-    # Dataset
-    parser.add_argument(
-        "--data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados processados"
-    )
-    parser.add_argument(
-        "--pose_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados de pose"
-    )
-    parser.add_argument(
-        "--emotion_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados de emoção"
-    )
     parser.add_argument(
         "--batch_size",
         type=int,
@@ -150,13 +131,6 @@ def main():
         help="Analisar limitações"
     )
     
-    # Output
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Diretório de saída"
-    )
     parser.add_argument(
         "--experiment_name",
         type=str,
@@ -173,14 +147,6 @@ def main():
     )
     
     args = parser.parse_args()
-    if args.data_root is None:
-        args.data_root = str(p.PROCESSED_ROOT)
-    if args.pose_data_root is None:
-        args.pose_data_root = str(p.POSE_ROOT)
-    if args.emotion_data_root is None:
-        args.emotion_data_root = str(p.EMOTION_ROOT)
-    if args.output_dir is None:
-        args.output_dir = str(p.EXPERIMENTS_ROOT)
     
     # Definir experimentos a executar
     if args.all:
@@ -207,7 +173,7 @@ def main():
     print("=" * 60)
     print(f"Model: {args.model}")
     print(f"Model Path: {args.model_path}")
-    print(f"Output Dir: {args.output_dir}")
+    print(f"Output Dir: {p.EXPERIMENTS_ROOT}")
     print(f"Experiment Name: {args.experiment_name}")
     print(f"Device: {args.device}")
     print()
@@ -228,15 +194,15 @@ def main():
     print("Loading dataset...")
     if args.model == "baseline":
         _, _, test_loader = get_dataloaders(
-            processed_data_root=args.data_root,
+            processed_data_root=str(p.PROCESSED_ROOT),
             batch_size=args.batch_size,
             num_frames=16
         )
     elif args.model == "multimodal":
         _, _, test_loader = get_multimodal_dataloaders(
-            video_data_root=args.data_root,
-            pose_data_root=args.pose_data_root,
-            emotion_data_root=args.emotion_data_root,
+            video_data_root=str(p.PROCESSED_ROOT),
+            pose_data_root=str(p.POSE_ROOT),
+            emotion_data_root=str(p.EMOTION_ROOT),
             batch_size=args.batch_size,
             num_frames=16,
             window_size=16,
@@ -263,7 +229,7 @@ def main():
         results["metrics"] = metrics
         
         # Salvar resultados
-        output_path = Path(args.output_dir) / args.experiment_name / "metrics"
+        output_path = p.EXPERIMENTS_ROOT / args.experiment_name / "metrics"
         output_path.mkdir(parents=True, exist_ok=True)
         calculator.save_results(
             str(output_path),
@@ -283,7 +249,7 @@ def main():
         robustness_eval = RobustnessEvaluator(model, test_loader, device=args.device)
         robustness_results = robustness_eval.evaluate_all_distortions(
             DEFAULT_DISTORTION_CONFIGS,
-            args.output_dir,
+            str(p.EXPERIMENTS_ROOT),
             f"{args.experiment_name}/robustness"
         )
         results["robustness"] = robustness_results
@@ -296,7 +262,7 @@ def main():
         print("=" * 60)
         perf_eval = PerformanceEvaluator(model, test_loader, device=args.device)
         perf_results = perf_eval.evaluate_all(
-            args.output_dir,
+            str(p.EXPERIMENTS_ROOT),
             f"{args.experiment_name}/performance"
         )
         results["performance"] = perf_results
@@ -309,21 +275,21 @@ def main():
         print("=" * 60)
         limitations_analyzer = LimitationsAnalyzer(model, test_loader, device=args.device)
         limitations_results = limitations_analyzer.generate_error_report(
-            args.output_dir,
+            str(p.EXPERIMENTS_ROOT),
             f"{args.experiment_name}/limitations"
         )
         results["limitations"] = limitations_results
         print("✓ Limitations analysis completed")
     
     # Salvar resumo geral
-    summary_path = Path(args.output_dir) / args.experiment_name / "evaluation_summary.json"
+    summary_path = p.EXPERIMENTS_ROOT / args.experiment_name / "evaluation_summary.json"
     summary_path.parent.mkdir(parents=True, exist_ok=True)
     with open(summary_path, 'w') as f:
         json.dump(results, f, indent=2)
     
     print("\n" + "=" * 60)
     print("All experiments completed!")
-    print(f"Results saved to: {args.output_dir}/{args.experiment_name}")
+    print(f"Results saved to: {p.EXPERIMENTS_ROOT / args.experiment_name}")
     print("=" * 60)
 
 

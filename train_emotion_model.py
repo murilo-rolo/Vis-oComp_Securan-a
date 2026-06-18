@@ -136,20 +136,6 @@ def main():
     parser = argparse.ArgumentParser(description="Treinar modelo de Emotion Recognition no AffectNet")
     
     parser.add_argument(
-        "--dataset_path",
-        type=str,
-        default=None,
-        help="Caminho para o dataset AffectNet"
-    )
-    
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Diretório para salvar checkpoints"
-    )
-    
-    parser.add_argument(
         "--epochs",
         type=int,
         default=10,
@@ -186,13 +172,9 @@ def main():
     
     args = parser.parse_args()
     
-    if args.dataset_path is None:
-        args.dataset_path = str(p.AFFECTNET_ROOT)
-    if args.output_dir is None:
-        args.output_dir = str(p.EMOTION_MODELS_ROOT)
-    
+    args.dataset_path = str(p.AFFECTNET_ROOT)
     # Criar diretório de saída
-    output_dir = Path(args.output_dir)
+    output_dir = p.EMOTION_MODELS_ROOT
     output_dir.mkdir(parents=True, exist_ok=True)
     
     # Criar datasets
@@ -244,7 +226,7 @@ def main():
     print("=" * 60)
     print("Treinamento do Modelo de Emotion Recognition")
     print("=" * 60)
-    print(f"Dataset: {args.dataset_path}")
+    print(f"Dataset: {p.AFFECTNET_ROOT}")
     print(f"Device: {args.device}")
     print(f"Épocas: {args.epochs}")
     print(f"Batch size: {args.batch_size}")

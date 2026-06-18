@@ -8,8 +8,6 @@ Classes a manter:
 Total: 9 classes (de 101)
 """
 
-import argparse
-from pathlib import Path
 import shutil
 
 from src import paths as p
@@ -29,8 +27,8 @@ CLASSES_TO_KEEP = [
     "MilitaryParade"
 ]
 
-# Caminho do dataset (sobrescrito pelo argparse)
-DATASET_ROOT = None
+# Caminho do dataset
+DATASET_ROOT = p.UCF101_ROOT
 SPLITS = ["train", "test", "val"]
 
 
@@ -162,20 +160,7 @@ def validate_filtering(classes_to_keep: list):
 def main():
     """Função principal."""
     global DATASET_ROOT
-
-    parser = argparse.ArgumentParser(
-        description="Filtra classes do dataset UCF101 mantendo apenas as relevantes"
-    )
-    parser.add_argument(
-        "--dataset_root",
-        type=str,
-        default=None,
-        help="Diretório raiz do dataset UCF101"
-    )
-    args = parser.parse_args()
-    if args.dataset_root is None:
-        args.dataset_root = str(p.UCF101_ROOT)
-    DATASET_ROOT = Path(args.dataset_root)
+    DATASET_ROOT = p.UCF101_ROOT
 
     print("="*60)
     print("FILTRO DE CLASSES UCF101")

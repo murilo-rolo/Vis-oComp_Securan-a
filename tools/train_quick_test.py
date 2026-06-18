@@ -7,7 +7,6 @@ Ideal para:
 - Validação rápida antes de treinar por completo
 """
 
-import argparse
 import sys
 from pathlib import Path
 
@@ -17,25 +16,6 @@ from src.training.train import train
 from src import paths as p
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Treinamento rápido para teste")
-    parser.add_argument(
-        "--processed_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados processados"
-    )
-    parser.add_argument(
-        "--results_root",
-        type=str,
-        default=None,
-        help="Raiz dos resultados, onde ficará best_model.pth"
-    )
-    args = parser.parse_args()
-    if args.processed_data_root is None:
-        args.processed_data_root = str(p.PROCESSED_ROOT)
-    if args.results_root is None:
-        args.results_root = str(p.MODELS_ROOT)
-
     print("="*60)
     print("TREINAMENTO RÁPIDO - TESTE (10 ÉPOCAS)")
     print("="*60)
@@ -47,7 +27,6 @@ if __name__ == "__main__":
     print("\n" + "="*60 + "\n")
     
     train(
-        processed_data_root=args.processed_data_root,
         batch_size=4,  # Reduzido para economizar memória
         num_frames=16,
         num_epochs=10,  # Apenas 10 épocas para teste
@@ -57,7 +36,7 @@ if __name__ == "__main__":
         dropout=0.5,
         num_workers=2,  # Reduzido para economizar recursos
         device=None,  # Auto-detecta (CPU ou GPU)
-        save_dir=args.results_root,
+        save_dir=str(p.MODELS_ROOT),
         seed=42,
         early_stopping_patience=5,  # Para mais cedo se não melhorar
         use_scheduler=True

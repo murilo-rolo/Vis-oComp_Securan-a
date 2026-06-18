@@ -18,7 +18,7 @@ from src import paths as p
 
 
 def train(
-    processed_data_root: str = None,
+    processed_data_root: str = str(p.PROCESSED_ROOT),
     batch_size: int = 8,
     num_frames: int = 16,
     num_epochs: int = 50,
@@ -28,7 +28,7 @@ def train(
     dropout: float = 0.5,
     num_workers: int = 4,
     device: str = None,
-    save_dir: str = None,
+    save_dir: str = str(p.MODELS_ROOT),
     seed: int = 42,
     early_stopping_patience: int = 10,
     use_scheduler: bool = True
@@ -142,12 +142,6 @@ def main():
     )
     
     parser.add_argument(
-        "--processed_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados processados"
-    )
-    parser.add_argument(
         "--batch_size",
         type=int,
         default=8,
@@ -202,12 +196,6 @@ def main():
         help="Device (cuda/cpu). Se None, detecta automaticamente"
     )
     parser.add_argument(
-        "--save_dir",
-        type=str,
-        default=None,
-        help="Diretório para salvar modelos"
-    )
-    parser.add_argument(
         "--seed",
         type=int,
         default=42,
@@ -234,13 +222,7 @@ def main():
     
     args = parser.parse_args()
     
-    if args.processed_data_root is None:
-        args.processed_data_root = str(p.PROCESSED_ROOT)
-    if args.save_dir is None:
-        args.save_dir = str(p.MODELS_ROOT)
-    
     train(
-        processed_data_root=args.processed_data_root,
         batch_size=args.batch_size,
         num_frames=args.num_frames,
         num_epochs=args.num_epochs,
@@ -250,7 +232,6 @@ def main():
         dropout=args.dropout,
         num_workers=args.num_workers,
         device=args.device,
-        save_dir=args.save_dir,
         seed=args.seed,
         early_stopping_patience=args.early_stopping_patience,
         use_scheduler=args.use_scheduler

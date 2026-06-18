@@ -40,26 +40,6 @@ def _multimodal_hook(batch):
 def main():
     parser = argparse.ArgumentParser(description="Treinar modelo multimodal de detecção de risco")
     
-    # Dados
-    parser.add_argument(
-        "--video_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados de vídeo"
-    )
-    parser.add_argument(
-        "--pose_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados de pose"
-    )
-    parser.add_argument(
-        "--emotion_data_root",
-        type=str,
-        default=None,
-        help="Raiz dos dados de emoção"
-    )
-    
     # Modelo
     parser.add_argument(
         "--fusion_method",
@@ -112,14 +92,6 @@ def main():
         help="Tamanho da janela temporal"
     )
     
-    # Output
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        default=None,
-        help="Diretório para salvar checkpoints"
-    )
-    
     # Outros
     parser.add_argument(
         "--num_workers",
@@ -136,17 +108,8 @@ def main():
     
     args = parser.parse_args()
     
-    if args.video_data_root is None:
-        args.video_data_root = str(p.PROCESSED_ROOT)
-    if args.pose_data_root is None:
-        args.pose_data_root = str(p.POSE_ROOT)
-    if args.emotion_data_root is None:
-        args.emotion_data_root = str(p.EMOTION_ROOT)
-    if args.output_dir is None:
-        args.output_dir = str(p.MULTIMODAL_ROOT)
-    
     # Criar diretório de saída
-    output_dir = Path(args.output_dir)
+    output_dir = p.MULTIMODAL_ROOT
     output_dir.mkdir(parents=True, exist_ok=True)
     
     device = torch.device(args.device)
@@ -186,8 +149,8 @@ def main():
 
     print("Criando DataLoaders...")
     train_loader, val_loader, test_loader = get_multimodal_dataloaders(
-        video_data_root=args.video_data_root, pose_data_root=args.pose_data_root,
-        emotion_data_root=args.emotion_data_root, batch_size=args.batch_size,
+        video_data_root=str(p.PROCESSED_ROOT), pose_data_root=str(p.POSE_ROOT),
+        emotion_data_root=str(p.EMOTION_ROOT), batch_size=args.batch_size,
         num_frames=args.num_frames, window_size=args.window_size,
         video_mode="frames", pose_mode="flatten",
         num_workers=args.num_workers, dataset_name="rwf2000"
