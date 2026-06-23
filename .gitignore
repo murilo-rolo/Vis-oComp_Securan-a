@@ -70,6 +70,8 @@ results/cnn3d/**/*.pth
 results/cnn3d/**/*.pt
 results/emotion/*.pth
 results/emotion/*.pt
+results/emotion/*.npy
+results/emotion/*.png
 results/reports/*.txt
 results/reports/*.json
 results/reports/*.png

@@ -23,8 +23,8 @@ AFFECTNET_CLASSES = {
     'neutral': 0,
     'happy': 1,
     'sad': 2,
-    'angry': 3,
-    'fearful': 4,
+    'anger': 3,
+    'fear': 4,
     'disgust': 5,
     'surprise': 6,
     'contempt': 7
@@ -285,8 +285,8 @@ def main():
         optimizer, mode='min', factor=0.5, patience=3
     )
     
-    # Early stopping
-    best_val_loss = float('inf')
+    # Early stopping (baseado em val_acc, mesma métrica do checkpoint)
+    best_val_acc_early = 0.0
     epochs_no_improve = 0
     
     # Treinamento
@@ -364,14 +364,14 @@ def main():
             )
             print(f"\n✓ Melhor modelo salvo! Val Acc: {val_acc:.2f}%")
         
-        # Early stopping
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
+        # Early stopping (baseado em val_acc)
+        if val_acc > best_val_acc_early:
+            best_val_acc_early = val_acc
             epochs_no_improve = 0
         else:
             epochs_no_improve += 1
             if epochs_no_improve >= args.early_stop_patience:
-                print(f"\n⏹ Early stopping na época {epoch} (val_loss não melhorou por {args.early_stop_patience} épocas)")
+                print(f"\n⏹ Early stopping na época {epoch} (val_acc não melhorou por {args.early_stop_patience} épocas)")
                 break
         
         print()
