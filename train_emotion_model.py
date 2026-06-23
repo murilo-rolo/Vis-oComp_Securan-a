@@ -3,6 +3,8 @@ Script de treinamento para modelo de Emotion Recognition no dataset AffectNet.
 """
 
 import argparse
+import json
+import copy
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -103,24 +105,25 @@ class AffectNetDataset(Dataset):
 
 
 def get_transforms(is_train: bool = True):
-    """
-    Retorna transformações para treino ou validação.
-    
-    Args:
-        is_train: Se True, retorna augmentations para treino
-    
-    Returns:
-        Compose de transformações
-    """
     if is_train:
-        return transforms.Compose([
+        aug_list = [
             transforms.Resize((256, 256)),
+            transforms.RandomRotation(degrees=10),
             transforms.RandomCrop(224),
             transforms.RandomHorizontalFlip(p=0.5),
-            transforms.ColorJitter(brightness=0.2, contrast=0.2),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+        ]
+        try:
+            from torchvision.transforms import RandAugment
+            aug_list.insert(0, RandAugment(num_ops=2, magnitude=9))
+        except ImportError:
+            pass
+        aug_list += [
             transforms.ToTensor(),
+            transforms.RandomErasing(p=0.25),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])
-        ])
+        ]
+        return transforms.Compose(aug_list)
     else:
         return transforms.Compose([
             transforms.Resize((224, 224)),
@@ -170,6 +173,20 @@ def main():
         help="Device para treinamento"
     )
     
+    parser.add_argument(
+        "--early_stop_patience",
+        type=int,
+        default=5,
+        help="Épocas sem melhora na val loss para early stopping"
+    )
+    
+    parser.add_argument(
+        "--weight_decay",
+        type=float,
+        default=1e-4,
+        help="Weight decay (L2 regularization) para o Adam"
+    )
+    
     args = parser.parse_args()
     
     args.dataset_path = str(p.AFFECTNET_ROOT)
@@ -211,8 +228,23 @@ def main():
     
     # Loss e optimizer
     criterion = nn.CrossEntropyLoss()
-    optimizer = optim.Adam(model.parameters(), lr=args.learning_rate)
-    scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=15, gamma=0.1)
+    
+    # Linear scaling rule: ajustar LR proporcionalmente ao batch size
+    REFERENCE_BATCH = 32
+    adjusted_lr = args.learning_rate * (args.batch_size / REFERENCE_BATCH)
+    
+    optimizer = optim.Adam(
+        model.parameters(),
+        lr=adjusted_lr,
+        weight_decay=args.weight_decay
+    )
+    scheduler = optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer, mode='min', factor=0.5, patience=3, verbose=True
+    )
+    
+    # Early stopping
+    best_val_loss = float('inf')
+    epochs_no_improve = 0
     
     # Treinamento
     best_val_acc = 0.0
@@ -230,7 +262,10 @@ def main():
     print(f"Device: {args.device}")
     print(f"Épocas: {args.epochs}")
     print(f"Batch size: {args.batch_size}")
-    print(f"Learning rate: {args.learning_rate}")
+    print(f"Learning rate base: {args.learning_rate}")
+    print(f"Learning rate ajustado: {adjusted_lr:.6f}")
+    print(f"Weight decay: {args.weight_decay}")
+    print(f"Early stop patience: {args.early_stop_patience}")
     print("=" * 60)
     print()
     
@@ -245,8 +280,8 @@ def main():
             is_train=False, desc=f"Epoch {epoch} [Val]"
         )
         
-        # Atualizar learning rate
-        scheduler.step()
+        # Atualizar learning rate (ReduceLROnPlateau baseado na val_loss)
+        scheduler.step(val_loss)
         
         # Salvar histórico
         history['train_loss'].append(train_loss)
@@ -257,9 +292,10 @@ def main():
         # Salvar melhor modelo
         if val_acc > best_val_acc:
             best_val_acc = val_acc
+            best_model_state = copy.deepcopy(model.state_dict())
             checkpoint = {
                 'epoch': epoch,
-                'model_state_dict': model.state_dict(),
+                'model_state_dict': best_model_state,
                 'optimizer_state_dict': optimizer.state_dict(),
                 'val_acc': val_acc,
                 'val_loss': val_loss
@@ -267,7 +303,20 @@ def main():
             torch.save(checkpoint, output_dir / 'best_model.pth')
             print(f"\n✓ Melhor modelo salvo! Val Acc: {val_acc:.2f}%")
         
+        # Early stopping
+        if val_loss < best_val_loss:
+            best_val_loss = val_loss
+            epochs_no_improve = 0
+        else:
+            epochs_no_improve += 1
+            if epochs_no_improve >= args.early_stop_patience:
+                print(f"\n⏹ Early stopping na época {epoch} (val_loss não melhorou por {args.early_stop_patience} épocas)")
+                break
+        
         print()
+    
+    # Recarregar melhor modelo
+    model.load_state_dict(best_model_state)
     
     # Salvar histórico
     with open(output_dir / 'training_history.json', 'w') as f:
@@ -276,6 +325,7 @@ def main():
     print("=" * 60)
     print("Treinamento concluído!")
     print(f"Melhor Val Acc: {best_val_acc:.2f}%")
+    print(f"Modelo recarregado do best checkpoint (época {checkpoint['epoch']})")
     print(f"Modelo salvo em: {output_dir / 'best_model.pth'}")
     print("=" * 60)
 
