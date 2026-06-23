@@ -23,7 +23,9 @@ def run_epoch(
     optimizer: Optional[optim.Optimizer] = None,
     desc: str = "Epoch",
     model_hook: Optional[Callable] = None,
-) -> Tuple[float, float]:
+    scaler: Optional[torch.cuda.amp.GradScaler] = None,
+    return_metrics: bool = False,
+):
     """
     Executa uma época de treino ou validação.
 
@@ -37,15 +39,20 @@ def run_epoch(
         desc: Descrição para a barra de progresso
         model_hook: Função opcional para pré-processar batch antes do forward.
                     Recebe (batch) e retorna (inputs, labels).
+        scaler: GradScaler para mixed precision (opcional)
+        return_metrics: Se True, retorna também dict com F1, precision, recall, confusion_matrix
 
     Returns:
-        Tupla (loss_média, accuracy)
+        Se return_metrics=False: Tupla (loss_média, accuracy)
+        Se return_metrics=True: Tupla (loss_média, accuracy, metrics_dict)
     """
     model.train() if is_train else model.eval()
 
     running_loss = 0.0
     correct = 0
     total = 0
+    all_labels = []
+    all_preds = []
 
     with torch.set_grad_enabled(is_train):
         pbar = tqdm(loader, desc=desc)
@@ -65,17 +72,22 @@ def run_epoch(
             if is_train:
                 optimizer.zero_grad()
 
-            outputs = model(inputs)
-            loss = criterion(outputs, labels)
+            with torch.cuda.amp.autocast(enabled=scaler is not None):
+                outputs = model(inputs)
+                loss = criterion(outputs, labels)
 
             if is_train:
-                loss.backward()
-                optimizer.step()
+                scaler.scale(loss).backward()
+                scaler.step(optimizer)
+                scaler.update()
 
             running_loss += loss.item()
             _, predicted = outputs.max(1)
             total += labels.size(0)
             correct += predicted.eq(labels).sum().item()
+
+            all_labels.extend(labels.cpu().tolist())
+            all_preds.extend(predicted.cpu().tolist())
 
             current_loss = running_loss / (pbar.n + 1)
             current_acc = 100.0 * correct / total
@@ -83,6 +95,16 @@ def run_epoch(
 
     epoch_loss = running_loss / len(loader)
     epoch_acc = 100.0 * correct / total
+
+    if return_metrics:
+        from sklearn.metrics import f1_score, precision_score, recall_score, confusion_matrix
+        metrics = {
+            'f1_score': float(f1_score(all_labels, all_preds, average='macro')),
+            'precision': float(precision_score(all_labels, all_preds, average='macro')),
+            'recall': float(recall_score(all_labels, all_preds, average='macro')),
+            'confusion_matrix': confusion_matrix(all_labels, all_preds, labels=range(8)).tolist(),
+        }
+        return epoch_loss, epoch_acc, metrics
 
     return epoch_loss, epoch_acc
 

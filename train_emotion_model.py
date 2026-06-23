@@ -4,7 +4,7 @@ Script de treinamento para modelo de Emotion Recognition no dataset AffectNet.
 
 import argparse
 import json
-import copy
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -135,6 +135,33 @@ def get_transforms(is_train: bool = True):
 
 
 
+def _plot_confusion_matrix(cm, class_names, output_path):
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    fig, ax = plt.subplots(figsize=(10, 8))
+    im = ax.imshow(cm, interpolation='nearest', cmap=plt.cm.Blues)
+    ax.figure.colorbar(im, ax=ax)
+    ax.set(
+        xticks=np.arange(len(class_names)),
+        yticks=np.arange(len(class_names)),
+        xticklabels=class_names, yticklabels=class_names,
+        xlabel='Predicted', ylabel='True'
+    )
+    plt.setp(ax.get_xticklabels(), rotation=45, ha="right", rotation_mode="anchor")
+
+    thresh = cm.max() / 2.
+    for i in range(len(class_names)):
+        for j in range(len(class_names)):
+            ax.text(j, i, format(cm[i, j], 'd'),
+                    ha="center", va="center",
+                    color="white" if cm[i, j] > thresh else "black")
+
+    fig.tight_layout()
+    plt.savefig(output_path, dpi=150, bbox_inches='tight')
+    plt.close(fig)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Treinar modelo de Emotion Recognition no AffectNet")
     
@@ -187,6 +214,19 @@ def main():
         help="Weight decay (L2 regularization) para o Adam"
     )
     
+    parser.add_argument(
+        "--amp",
+        action="store_true",
+        default=torch.cuda.is_available(),
+        help="Enable mixed precision training (default: True se CUDA disponível)"
+    )
+    parser.add_argument(
+        "--no-amp",
+        action="store_false",
+        dest="amp",
+        help="Disable mixed precision training"
+    )
+    
     args = parser.parse_args()
     
     args.dataset_path = str(p.AFFECTNET_ROOT)
@@ -226,6 +266,9 @@ def main():
         device=args.device
     )
     
+    # Mixed precision
+    scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
+    
     # Loss e optimizer
     criterion = nn.CrossEntropyLoss()
     
@@ -239,7 +282,7 @@ def main():
         weight_decay=args.weight_decay
     )
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
-        optimizer, mode='min', factor=0.5, patience=3, verbose=True
+        optimizer, mode='min', factor=0.5, patience=3
     )
     
     # Early stopping
@@ -252,7 +295,10 @@ def main():
         'train_loss': [],
         'train_acc': [],
         'val_loss': [],
-        'val_acc': []
+        'val_acc': [],
+        'val_f1': [],
+        'val_precision': [],
+        'val_recall': []
     }
     
     print("=" * 60)
@@ -265,6 +311,7 @@ def main():
     print(f"Learning rate base: {args.learning_rate}")
     print(f"Learning rate ajustado: {adjusted_lr:.6f}")
     print(f"Weight decay: {args.weight_decay}")
+    print(f"Mixed precision: {'ON' if args.amp else 'OFF'}")
     print(f"Early stop patience: {args.early_stop_patience}")
     print("=" * 60)
     print()
@@ -272,12 +319,13 @@ def main():
     for epoch in range(1, args.epochs + 1):
         train_loss, train_acc = run_epoch(
             model, train_loader, criterion, device,
-            is_train=True, optimizer=optimizer,
+            is_train=True, optimizer=optimizer, scaler=scaler,
             desc=f"Epoch {epoch} [Train]"
         )
-        val_loss, val_acc = run_epoch(
+        val_loss, val_acc, val_metrics = run_epoch(
             model, val_loader, criterion, device,
-            is_train=False, desc=f"Epoch {epoch} [Val]"
+            is_train=False, return_metrics=True,
+            desc=f"Epoch {epoch} [Val]"
         )
         
         # Atualizar learning rate (ReduceLROnPlateau baseado na val_loss)
@@ -288,19 +336,32 @@ def main():
         history['train_acc'].append(train_acc)
         history['val_loss'].append(val_loss)
         history['val_acc'].append(val_acc)
+        history['val_f1'].append(val_metrics['f1_score'])
+        history['val_precision'].append(val_metrics['precision'])
+        history['val_recall'].append(val_metrics['recall'])
+        
+        print(f"         ↳ F1: {val_metrics['f1_score']:.4f} | Prec: {val_metrics['precision']:.4f} | Rec: {val_metrics['recall']:.4f}")
         
         # Salvar melhor modelo
         if val_acc > best_val_acc:
             best_val_acc = val_acc
-            best_model_state = copy.deepcopy(model.state_dict())
             checkpoint = {
                 'epoch': epoch,
-                'model_state_dict': best_model_state,
+                'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
                 'val_acc': val_acc,
                 'val_loss': val_loss
             }
             torch.save(checkpoint, output_dir / 'best_model.pth')
+            
+            # Salvar matriz de confusão da melhor época
+            cm = np.array(val_metrics['confusion_matrix'])
+            np.save(output_dir / 'confusion_matrix.npy', cm)
+            _plot_confusion_matrix(
+                cm,
+                class_names=['neutral', 'happy', 'sad', 'angry', 'fearful', 'disgust', 'surprise', 'contempt'],
+                output_path=output_dir / 'confusion_matrix.png'
+            )
             print(f"\n✓ Melhor modelo salvo! Val Acc: {val_acc:.2f}%")
         
         # Early stopping
@@ -315,8 +376,9 @@ def main():
         
         print()
     
-    # Recarregar melhor modelo
-    model.load_state_dict(best_model_state)
+    # Recarregar melhor modelo do arquivo
+    checkpoint = torch.load(output_dir / 'best_model.pth', map_location=args.device)
+    model.load_state_dict(checkpoint['model_state_dict'])
     
     # Salvar histórico
     with open(output_dir / 'training_history.json', 'w') as f:
@@ -325,6 +387,7 @@ def main():
     print("=" * 60)
     print("Treinamento concluído!")
     print(f"Melhor Val Acc: {best_val_acc:.2f}%")
+    print(f"Melhor Val F1:  {max(history['val_f1']):.4f}")
     print(f"Modelo recarregado do best checkpoint (época {checkpoint['epoch']})")
     print(f"Modelo salvo em: {output_dir / 'best_model.pth'}")
     print("=" * 60)
