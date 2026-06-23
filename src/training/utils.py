@@ -72,7 +72,7 @@ def run_epoch(
             if is_train:
                 optimizer.zero_grad()
 
-            with torch.cuda.amp.autocast(enabled=scaler is not None):
+            with torch.amp.autocast('cuda', enabled=scaler is not None):
                 outputs = model(inputs)
                 loss = criterion(outputs, labels)
 
