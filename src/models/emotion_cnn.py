@@ -8,8 +8,8 @@ Classes de emoção (8 classes padrão):
 - 0: Neutral
 - 1: Happy
 - 2: Sad
-- 3: Angry
-- 4: Fearful
+- 3: Anger
+- 4: Fear
 - 5: Disgust
 - 6: Surprise
 - 7: Contempt
@@ -42,8 +42,8 @@ class EmotionNet(nn.Module):
     
     # Mapeamento de classes de emoção
     EMOTION_CLASSES = [
-        'neutral', 'happy', 'sad', 'angry', 
-        'fearful', 'disgust', 'surprise', 'contempt'
+        'neutral', 'happy', 'sad', 'anger', 
+        'fear', 'disgust', 'surprise', 'contempt'
     ]
     
     def __init__(
