@@ -172,8 +172,9 @@ def create_emotion_model(
     dropout: float = 0.5,
     input_size: Tuple[int, int] = (224, 224),
     checkpoint_path: Optional[str] = None,
+    resume_training: bool = False,
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
-) -> EmotionNet:
+):
     """
     Função auxiliar para criar e carregar modelo de emoção.
     
@@ -183,10 +184,11 @@ def create_emotion_model(
         dropout: Taxa de dropout
         input_size: Tamanho de entrada
         checkpoint_path: Caminho para checkpoint pré-treinado (opcional)
+        resume_training: Se True, retorna (model, checkpoint) e não força eval()
         device: Device para mover o modelo
     
     Returns:
-        Modelo EmotionNet no device especificado
+        EmotionNet ou (EmotionNet, dict) se resume_training=True
     """
     model = EmotionNet(
         num_emotions=num_emotions,
@@ -195,29 +197,36 @@ def create_emotion_model(
         input_size=input_size
     )
     
+    ckpt = None
+    
     # Carregar checkpoint se fornecido
     if checkpoint_path is not None:
         try:
-            checkpoint = torch.load(checkpoint_path, map_location=device)
+            ckpt = torch.load(checkpoint_path, map_location=device)
             
             # Lidar com diferentes formatos de checkpoint
-            if isinstance(checkpoint, dict):
-                if 'model_state_dict' in checkpoint:
-                    model.load_state_dict(checkpoint['model_state_dict'])
-                elif 'state_dict' in checkpoint:
-                    model.load_state_dict(checkpoint['state_dict'])
+            if isinstance(ckpt, dict):
+                if 'model_state_dict' in ckpt:
+                    model.load_state_dict(ckpt['model_state_dict'])
+                elif 'state_dict' in ckpt:
+                    model.load_state_dict(ckpt['state_dict'])
                 else:
-                    model.load_state_dict(checkpoint)
+                    model.load_state_dict(ckpt)
             else:
-                model.load_state_dict(checkpoint)
+                model.load_state_dict(ckpt)
             
             print(f"Checkpoint carregado de: {checkpoint_path}")
         except Exception as e:
             print(f"Erro ao carregar checkpoint: {e}")
             print("Usando modelo com pesos ImageNet pré-treinados")
+            ckpt = None
     
     model = model.to(device)
-    model.eval()  # Modo avaliação por padrão
     
+    if resume_training and ckpt is not None:
+        model.train()
+        return model, ckpt
+    
+    model.eval()
     return model
 

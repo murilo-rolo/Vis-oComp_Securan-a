@@ -235,6 +235,12 @@ def main():
     )
     
     parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Retomar treino a partir do último best_model.pth"
+    )
+    
+    parser.add_argument(
         "--amp",
         action="store_true",
         default=torch.cuda.is_available(),
@@ -287,12 +293,26 @@ def main():
     
     # Criar modelo
     device = torch.device(args.device)
-    model = create_emotion_model(
-        num_emotions=8,
-        pretrained=True,
-        dropout=0.5,
-        device=args.device
-    )
+    
+    resume_checkpoint_path = output_dir / 'best_model.pth'
+    start_epoch = 1
+    ckpt = None
+    
+    if args.resume and resume_checkpoint_path.exists():
+        model, ckpt = create_emotion_model(
+            num_emotions=8, pretrained=True, dropout=0.5,
+            checkpoint_path=str(resume_checkpoint_path),
+            resume_training=True, device=args.device
+        )
+        start_epoch = ckpt['epoch'] + 1
+        best_val_acc = ckpt['val_acc']
+        print(f"Retomando treino da época {ckpt['epoch']} (val_acc: {ckpt['val_acc']:.2f}%)")
+    else:
+        model = create_emotion_model(
+            num_emotions=8, pretrained=True, dropout=0.5,
+            device=args.device
+        )
+        best_val_acc = 0.0
     
     # Mixed precision
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
@@ -312,12 +332,18 @@ def main():
         optimizer, mode='min', factor=0.5, patience=3
     )
     
-    # Early stopping (baseado em val_acc, mesma métrica do checkpoint)
-    best_val_acc_early = 0.0
-    epochs_no_improve = 0
+    # Restaurar optimizer, scheduler e early stopping no resume
+    if args.resume and ckpt is not None:
+        optimizer.load_state_dict(ckpt['optimizer_state_dict'])
+        if 'scheduler_state_dict' in ckpt:
+            scheduler.load_state_dict(ckpt['scheduler_state_dict'])
+        best_val_acc_early = ckpt['val_acc']
+        epochs_no_improve = 0
+    else:
+        best_val_acc_early = 0.0
+        epochs_no_improve = 0
     
     # Treinamento
-    best_val_acc = 0.0
     history = {
         'train_loss': [],
         'train_acc': [],
@@ -345,10 +371,11 @@ def main():
         class_names = list(AFFECTNET_CLASSES.keys())
         weights_str = ", ".join(f"{n}: {w:.3f}" for n, w in zip(class_names, class_weights))
         print(f"  Pesos: {weights_str}")
+    print(f"Resume: {'ON (época ' + str(ckpt['epoch']) + ')' if args.resume and ckpt is not None else 'OFF'}")
     print("=" * 60)
     print()
     
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         train_loss, train_acc = run_epoch(
             model, train_loader, criterion, device,
             is_train=True, optimizer=optimizer, scaler=scaler,
@@ -381,6 +408,7 @@ def main():
                 'epoch': epoch,
                 'model_state_dict': model.state_dict(),
                 'optimizer_state_dict': optimizer.state_dict(),
+                'scheduler_state_dict': scheduler.state_dict(),
                 'val_acc': val_acc,
                 'val_loss': val_loss
             }
