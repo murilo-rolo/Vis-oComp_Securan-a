@@ -215,6 +215,26 @@ def main():
     )
     
     parser.add_argument(
+        "--label_smoothing",
+        type=float,
+        default=0.1,
+        help="Label smoothing epsilon (0 = desativado)"
+    )
+    
+    parser.add_argument(
+        "--class_weights",
+        action="store_true",
+        default=True,
+        help="Usar pesos por classe no CrossEntropyLoss"
+    )
+    parser.add_argument(
+        "--no-class-weights",
+        action="store_false",
+        dest="class_weights",
+        help="Desabilitar pesos por classe"
+    )
+    
+    parser.add_argument(
         "--amp",
         action="store_true",
         default=torch.cuda.is_available(),
@@ -247,6 +267,14 @@ def main():
         transform=get_transforms(is_train=False)
     )
     
+    # Computar pesos por classe para lidar com desbalanceamento
+    class_counts = torch.zeros(len(AFFECTNET_CLASSES))
+    for _, label in train_dataset.samples:
+        class_counts[label] += 1
+    class_weights = class_counts.sum() / (len(AFFECTNET_CLASSES) * class_counts)
+    # Garantir que nenhum peso seja infinito (classe com 0 amostras)
+    class_weights = torch.nan_to_num(class_weights, nan=1.0)
+    
     # Criar DataLoaders
     train_loader = create_dataloader(
         train_dataset, batch_size=args.batch_size,
@@ -270,7 +298,10 @@ def main():
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
     
     # Loss e optimizer
-    criterion = nn.CrossEntropyLoss()
+    criterion = nn.CrossEntropyLoss(
+        weight=class_weights.to(device) if args.class_weights else None,
+        label_smoothing=args.label_smoothing
+    )
     
     # Linear scaling rule: ajustar LR proporcionalmente ao batch size
     REFERENCE_BATCH = 32
@@ -313,6 +344,12 @@ def main():
     print(f"Weight decay: {args.weight_decay}")
     print(f"Mixed precision: {'ON' if args.amp else 'OFF'}")
     print(f"Early stop patience: {args.early_stop_patience}")
+    print(f"Label smoothing: {args.label_smoothing}")
+    print(f"Class weights: {'ON' if args.class_weights else 'OFF'}")
+    if args.class_weights:
+        class_names = list(AFFECTNET_CLASSES.keys())
+        weights_str = ", ".join(f"{n}: {w:.3f}" for n, w in zip(class_names, class_weights))
+        print(f"  Pesos: {weights_str}")
     print("=" * 60)
     print()
     
