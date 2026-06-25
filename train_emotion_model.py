@@ -217,7 +217,7 @@ def main():
     parser.add_argument(
         "--label_smoothing",
         type=float,
-        default=0.1,
+        default=0.05,
         help="Label smoothing epsilon (0 = desativado)"
     )
     
@@ -303,13 +303,9 @@ def main():
         label_smoothing=args.label_smoothing
     )
     
-    # Linear scaling rule: ajustar LR proporcionalmente ao batch size
-    REFERENCE_BATCH = 32
-    adjusted_lr = args.learning_rate * (args.batch_size / REFERENCE_BATCH)
-    
     optimizer = optim.Adam(
         model.parameters(),
-        lr=adjusted_lr,
+        lr=args.learning_rate,
         weight_decay=args.weight_decay
     )
     scheduler = optim.lr_scheduler.ReduceLROnPlateau(
@@ -339,8 +335,7 @@ def main():
     print(f"Device: {args.device}")
     print(f"Épocas: {args.epochs}")
     print(f"Batch size: {args.batch_size}")
-    print(f"Learning rate base: {args.learning_rate}")
-    print(f"Learning rate ajustado: {adjusted_lr:.6f}")
+    print(f"Learning rate: {args.learning_rate}")
     print(f"Weight decay: {args.weight_decay}")
     print(f"Mixed precision: {'ON' if args.amp else 'OFF'}")
     print(f"Early stop patience: {args.early_stop_patience}")
