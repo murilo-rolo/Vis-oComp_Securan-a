@@ -3,6 +3,7 @@ Script de treinamento para modelo de Emotion Recognition no dataset AffectNet.
 """
 
 import argparse
+import csv
 import json
 import numpy as np
 import torch
@@ -12,7 +13,7 @@ from torch.utils.data import Dataset
 from torchvision import transforms
 from pathlib import Path
 from PIL import Image
-from typing import Optional
+from typing import Optional, List, Tuple
 
 from src.models.emotion_cnn import create_emotion_model
 from src.training.utils import run_epoch, create_dataloader
@@ -35,8 +36,12 @@ class AffectNetDataset(Dataset):
     """
     Dataset para AffectNet.
     
+    Usa labels.csv como fonte oficial de ground truth (coluna 'label'),
+    com fallback para labels por pasta caso o CSV não exista.
+    
     Estrutura esperada:
     dataset/AffectNet/
+    ├── labels.csv
     ├── Train/
     │   ├── neutral/
     │   ├── happy/
@@ -49,7 +54,8 @@ class AffectNetDataset(Dataset):
         self,
         data_root: Path,
         split: str = "Train",
-        transform: Optional[transforms.Compose] = None
+        transform: Optional[transforms.Compose] = None,
+        min_confidence: float = 0.0
     ):
         """
         Inicializa o dataset AffectNet.
@@ -58,31 +64,73 @@ class AffectNetDataset(Dataset):
             data_root: Raiz do dataset AffectNet
             split: "Train" ou "Test"
             transform: Transformações a aplicar
+            min_confidence: Confiança mínima do label no CSV (0.0 = usa todos)
         """
-        self.data_root = Path(data_root) / split
+        self.data_root = Path(data_root)
         self.split = split
         self.transform = transform
+        self.min_confidence = min_confidence
         
-        # Carregar amostras
-        self.samples = []
         self.class_to_idx = AFFECTNET_CLASSES.copy()
         self.idx_to_class = {v: k for k, v in self.class_to_idx.items()}
         
-        # Processar cada classe
+        csv_path = self.data_root / 'labels.csv'
+        if csv_path.exists():
+            self.samples = self._load_from_csv(csv_path)
+            source = "CSV"
+        else:
+            print("⚠️  labels.csv não encontrado. Usando labels por pasta (legado).")
+            self.samples = self._load_from_folders()
+            source = "pastas"
+        
+        print(f"AffectNet {split}: {len(self.samples)} amostras carregadas ({source})")
+        if len(self.samples) == 0:
+            print(f"  ⚠️  Nenhuma imagem encontrada em {self.data_root / split}/")
+            print(f"      Verifique se o dataset foi baixado em: {self.data_root}")
+        else:
+            class_counts = {}
+            for _, label in self.samples:
+                class_counts[label] = class_counts.get(label, 0) + 1
+            print(f"  Distribuição: {', '.join(f'{self.idx_to_class[k]}: {v}' for k, v in sorted(class_counts.items()))}")
+    
+    def _load_from_csv(self, csv_path: Path) -> List[Tuple[Path, int]]:
+        samples = []
+        split_dir = self.data_root / self.split
+        
+        with open(csv_path, 'r') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                relFCs = float(row['relFCs'])
+                if relFCs < self.min_confidence:
+                    continue
+                
+                img_path = split_dir / row['pth']
+                if not img_path.exists():
+                    continue
+                
+                label = self.class_to_idx.get(row['label'])
+                if label is None:
+                    continue
+                
+                samples.append((img_path, label))
+        
+        return samples
+    
+    def _load_from_folders(self) -> List[Tuple[Path, int]]:
+        samples = []
+        split_dir = self.data_root / self.split
+        
         for class_name, class_idx in self.class_to_idx.items():
-            class_dir = self.data_root / class_name
+            class_dir = split_dir / class_name
             if not class_dir.exists():
-                # Tentar com primeira letra maiúscula
-                class_dir = self.data_root / class_name.capitalize()
+                class_dir = split_dir / class_name.capitalize()
             
             if class_dir.exists():
-                # Listar imagens
                 for ext in ['.jpg', '.jpeg', '.png']:
                     for img_path in class_dir.glob(f"*{ext}"):
-                        self.samples.append((img_path, class_idx))
+                        samples.append((img_path, class_idx))
         
-        print(f"AffectNet {split}: {len(self.samples)} amostras carregadas")
-        print(f"  Classes: {len(self.class_to_idx)}")
+        return samples
     
     def __len__(self):
         return len(self.samples)
@@ -90,14 +138,11 @@ class AffectNetDataset(Dataset):
     def __getitem__(self, idx):
         img_path, label = self.samples[idx]
         
-        # Carregar imagem
         try:
             image = Image.open(img_path).convert('RGB')
-        except Exception as e:
-            # Se erro, retornar imagem preta
+        except Exception:
             image = Image.new('RGB', (224, 224), (0, 0, 0))
         
-        # Aplicar transformações
         if self.transform:
             image = self.transform(image)
         
@@ -235,6 +280,13 @@ def main():
     )
     
     parser.add_argument(
+        "--min_confidence",
+        type=float,
+        default=0.0,
+        help="Confiança mínima do label no CSV (0.0 = usa todos, 0.7 recomendado)"
+    )
+    
+    parser.add_argument(
         "--resume",
         action="store_true",
         help="Retomar treino a partir do último best_model.pth"
@@ -264,13 +316,15 @@ def main():
     train_dataset = AffectNetDataset(
         data_root=args.dataset_path,
         split="Train",
-        transform=get_transforms(is_train=True)
+        transform=get_transforms(is_train=True),
+        min_confidence=args.min_confidence
     )
     
     val_dataset = AffectNetDataset(
         data_root=args.dataset_path,
         split="Test",
-        transform=get_transforms(is_train=False)
+        transform=get_transforms(is_train=False),
+        min_confidence=args.min_confidence
     )
     
     # Computar pesos por classe para lidar com desbalanceamento
@@ -299,6 +353,9 @@ def main():
     ckpt = None
     
     if args.resume and resume_checkpoint_path.exists():
+        if args.min_confidence > 0:
+            print("⚠️  AVISO: O checkpoint atual foi treinado com 37% dos labels incorretos.")
+            print("   Considere treinar do zero com --min_confidence para melhores resultados.")
         model, ckpt = create_emotion_model(
             num_emotions=8, pretrained=True, dropout=0.5,
             checkpoint_path=str(resume_checkpoint_path),
@@ -365,6 +422,7 @@ def main():
     print(f"Weight decay: {args.weight_decay}")
     print(f"Mixed precision: {'ON' if args.amp else 'OFF'}")
     print(f"Early stop patience: {args.early_stop_patience}")
+    print(f"Min confidence: {args.min_confidence}")
     print(f"Label smoothing: {args.label_smoothing}")
     print(f"Class weights: {'ON' if args.class_weights else 'OFF'}")
     if args.class_weights:
@@ -419,7 +477,7 @@ def main():
             np.save(output_dir / 'confusion_matrix.npy', cm)
             _plot_confusion_matrix(
                 cm,
-                class_names=['neutral', 'happy', 'sad', 'angry', 'fearful', 'disgust', 'surprise', 'contempt'],
+                class_names=list(AFFECTNET_CLASSES.keys()),
                 output_path=output_dir / 'confusion_matrix.png'
             )
             print(f"\n✓ Melhor modelo salvo! Val Acc: {val_acc:.2f}%")
