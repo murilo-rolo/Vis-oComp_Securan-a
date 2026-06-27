@@ -16,6 +16,7 @@ from PIL import Image
 from typing import Optional, List, Tuple
 
 from src.models.emotion_cnn import create_emotion_model
+from src.models.losses import FocalLoss
 from src.training.utils import run_epoch, create_dataloader
 from src import paths as p
 
@@ -287,6 +288,19 @@ def main():
     )
     
     parser.add_argument(
+        "--focal-loss",
+        action="store_true",
+        default=False,
+        help="Usar Focal Loss no lugar de CrossEntropyLoss"
+    )
+    parser.add_argument(
+        "--focal-gamma",
+        type=float,
+        default=2.0,
+        help="Gamma da Focal Loss (default: 2.0)"
+    )
+    
+    parser.add_argument(
         "--resume",
         action="store_true",
         help="Retomar treino a partir do último best_model.pth"
@@ -353,9 +367,6 @@ def main():
     ckpt = None
     
     if args.resume and resume_checkpoint_path.exists():
-        if args.min_confidence > 0:
-            print("⚠️  AVISO: O checkpoint atual foi treinado com 37% dos labels incorretos.")
-            print("   Considere treinar do zero com --min_confidence para melhores resultados.")
         model, ckpt = create_emotion_model(
             num_emotions=8, pretrained=True, dropout=0.5,
             checkpoint_path=str(resume_checkpoint_path),
@@ -375,10 +386,18 @@ def main():
     scaler = torch.cuda.amp.GradScaler(enabled=args.amp)
     
     # Loss e optimizer
-    criterion = nn.CrossEntropyLoss(
-        weight=class_weights.to(device) if args.class_weights else None,
-        label_smoothing=args.label_smoothing
-    )
+    if args.focal_loss:
+        if args.label_smoothing > 0:
+            print("  ⚠️  Label smoothing desativado (Focal Loss ativa)")
+        criterion = FocalLoss(
+            gamma=args.focal_gamma,
+            alpha=class_weights.to(device) if args.class_weights else None
+        )
+    else:
+        criterion = nn.CrossEntropyLoss(
+            weight=class_weights.to(device) if args.class_weights else None,
+            label_smoothing=args.label_smoothing
+        )
     
     optimizer = optim.Adam(
         model.parameters(),
@@ -423,7 +442,10 @@ def main():
     print(f"Mixed precision: {'ON' if args.amp else 'OFF'}")
     print(f"Early stop patience: {args.early_stop_patience}")
     print(f"Min confidence: {args.min_confidence}")
-    print(f"Label smoothing: {args.label_smoothing}")
+    if args.focal_loss:
+        print(f"Loss function:         Focal Loss (γ={args.focal_gamma})")
+    else:
+        print(f"Loss function:         CrossEntropy (label smoothing={args.label_smoothing})")
     print(f"Class weights: {'ON' if args.class_weights else 'OFF'}")
     if args.class_weights:
         class_names = list(AFFECTNET_CLASSES.keys())
