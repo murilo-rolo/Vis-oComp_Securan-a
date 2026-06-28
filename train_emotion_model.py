@@ -214,8 +214,8 @@ def main():
     parser.add_argument(
         "--epochs",
         type=int,
-        default=10,
-        help="Número de épocas (padrão: 10, use 50+ para treinamento completo)"
+        default=60,
+        help="Número de épocas"
     )
     
     parser.add_argument(
@@ -249,7 +249,7 @@ def main():
     parser.add_argument(
         "--early_stop_patience",
         type=int,
-        default=5,
+        default=8,
         help="Épocas sem melhora na val loss para early stopping"
     )
     
@@ -283,7 +283,7 @@ def main():
     parser.add_argument(
         "--min_confidence",
         type=float,
-        default=0.0,
+        default=0.7,
         help="Confiança mínima do label no CSV (0.0 = usa todos, 0.7 recomendado)"
     )
     
@@ -298,6 +298,13 @@ def main():
         type=float,
         default=2.0,
         help="Gamma da Focal Loss (default: 2.0)"
+    )
+    
+    parser.add_argument(
+        "--classifier-hidden",
+        type=int,
+        default=128,
+        help="Dimensão oculta do classifier 2-layer (default: 128)"
     )
     
     parser.add_argument(
@@ -369,6 +376,7 @@ def main():
     if args.resume and resume_checkpoint_path.exists():
         model, ckpt = create_emotion_model(
             num_emotions=8, pretrained=True, dropout=0.5,
+            classifier_hidden=args.classifier_hidden,
             checkpoint_path=str(resume_checkpoint_path),
             resume_training=True, device=args.device
         )
@@ -378,6 +386,7 @@ def main():
     else:
         model = create_emotion_model(
             num_emotions=8, pretrained=True, dropout=0.5,
+            classifier_hidden=args.classifier_hidden,
             device=args.device
         )
         best_val_acc = 0.0
@@ -442,6 +451,7 @@ def main():
     print(f"Mixed precision: {'ON' if args.amp else 'OFF'}")
     print(f"Early stop patience: {args.early_stop_patience}")
     print(f"Min confidence: {args.min_confidence}")
+    print(f"Classifier:           2-layer MLP (512→{args.classifier_hidden}→8)")
     if args.focal_loss:
         print(f"Loss function:         Focal Loss (γ={args.focal_gamma})")
     else:
